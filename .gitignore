@@ -65,3 +65,4 @@ _ci_build.*
 # bore.pub tunnel binary - no longer used
 bore
 bore.tar.gz
+*.bakup
