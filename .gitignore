@@ -1,0 +1,67 @@
+# Colab tunnel info — changes every session, never commit
+milvus_tunnel.json
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.env
+
+# Data / models
+*.pt
+*.pkl
+*.db
+logs/
+
+# ── Secrets ───────────────────────────────────────────────────────────
+# Never commit credentials. Keep tokens outside the repo folder entirely.
+*token*
+*.pem
+*.key
+kaggle.json
+
+# ── Raw datasets ──────────────────────────────────────────────────────
+# All public benchmarks — fetched by data/download_datasets.py.
+# ~950 MB of CSVs plus the PhysioNet raw records; two files exceed
+# GitHub's hard 100 MB per-file limit, so these can never be committed.
+data/*.csv
+data/vfdb/
+data/circor-heart-sound/
+*.wav
+*.dat
+*.hea
+*.avi
+*.mat
+
+# ── Node ──────────────────────────────────────────────────────────────
+node_modules/
+dist/
+
+# ── Caches ────────────────────────────────────────────────────────────
+.cache/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# ── LaTeX build artifacts ─────────────────────────────────────────────
+*.aux
+*.log
+*.out
+*.synctex.gz
+*.bbl
+*.blg
+*.toc
+*.fls
+*.fdb_latexmk
+
+# ── Backup / scratch clutter ──────────────────────────────────────────
+*.bak
+*.bak-*
+*.old
+_ci_build.*
+
+# ── Local editor state ────────────────────────────────────────────────
+.claude/settings.local.json
+
+# bore.pub tunnel binary - no longer used
+bore
+bore.tar.gz

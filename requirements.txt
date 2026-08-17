@@ -1,0 +1,40 @@
+fastapi
+uvicorn
+torch
+transformers
+pymilvus==2.6.9            # PIN to 2.x: pymilvus 3.x changed the ORM API used by
+                           # database/db_manager.py (connections/Collection/FieldSchema).
+                           # An unpinned install pulls 3.x and silently breaks the Milvus backend.
+sentence-transformers
+pydantic
+pydantic-settings
+python-multipart
+scikit-learn
+joblib
+pandas
+openpyxl
+kagglehub
+fpdf2
+opencv-python-headless
+numpy
+Pillow
+wfdb                        # decodes PTB-XL WFDB-format ECG waveforms (.hea/.dat)
+
+# ── LangChain RAG ─────────────────────────────────────────────────────────────
+langchain
+langchain-community
+langchain-huggingface
+faiss-cpu
+
+# ── LangGraph Agent ───────────────────────────────────────────────────────────
+langgraph
+
+# ── Auth (optional but recommended) ──────────────────────────────────────────
+python-jose[cryptography]
+bcrypt                      # used directly in auth.py (passlib NOT used — incompatible with bcrypt>=4.0)
+# passlib[bcrypt]           # DO NOT install: passlib<1.7.5 crashes with bcrypt>=4.0 on Python 3.14
+
+# ── Testing ───────────────────────────────────────────────────────────────────
+pytest
+pytest-cov
+httpx

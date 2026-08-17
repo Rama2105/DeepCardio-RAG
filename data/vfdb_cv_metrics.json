@@ -1,0 +1,257 @@
+{
+  "dataset": "MIT-BIH VFDB (PhysioNet), 22 recordings, 5s windows, 9218 windows total",
+  "protocol": "2x repeated 5-fold cross-validation, folds are WHOLE RECORDINGS stratified by dangerous-window fraction; validation recordings drawn from the training pool only",
+  "evaluation": "each test fold scored exactly once, after early stopping on val F1",
+  "n_recordings": 22,
+  "n_folds": 5,
+  "n_repeats": 2,
+  "overall_dangerous_fraction": 0.2164,
+  "epochs_max": 30,
+  "device": "cuda",
+  "runtime_s": 176.8,
+  "aggregate": {
+    "binary_auc": {
+      "mean": 0.9187,
+      "ci95_low": 0.8466,
+      "ci95_high": 0.9907,
+      "n_folds_used": 10
+    },
+    "binary_f1_dangerous": {
+      "mean": 0.7184,
+      "ci95_low": 0.6217,
+      "ci95_high": 0.8151,
+      "n_folds_used": 10
+    },
+    "binary_accuracy": {
+      "mean": 0.8672,
+      "ci95_low": 0.8127,
+      "ci95_high": 0.9216,
+      "n_folds_used": 10
+    },
+    "rhythm_f1_macro": {
+      "mean": 0.4512,
+      "ci95_low": 0.3831,
+      "ci95_high": 0.5193,
+      "n_folds_used": 10
+    }
+  },
+  "folds": [
+    {
+      "repeat": 1,
+      "fold": 1,
+      "test_recordings": [
+        "419",
+        "420",
+        "422",
+        "602",
+        "605"
+      ],
+      "n_train_recordings": 14,
+      "n_val_recordings": 3,
+      "n_test_windows": 2095,
+      "test_dangerous_fraction": 0.1547,
+      "single_class_test_fold": false,
+      "stopped_epoch": 9,
+      "best_val_f1_dangerous": 0.6206,
+      "binary_auc": 0.9821,
+      "binary_f1_dangerous": 0.6963,
+      "binary_accuracy": 0.8697,
+      "rhythm_f1_macro": 0.4481
+    },
+    {
+      "repeat": 1,
+      "fold": 2,
+      "test_recordings": [
+        "421",
+        "430",
+        "609",
+        "610"
+      ],
+      "n_train_recordings": 15,
+      "n_val_recordings": 3,
+      "n_test_windows": 1676,
+      "test_dangerous_fraction": 0.3419,
+      "single_class_test_fold": false,
+      "stopped_epoch": 10,
+      "best_val_f1_dangerous": 0.8447,
+      "binary_auc": 0.9369,
+      "binary_f1_dangerous": 0.7668,
+      "binary_accuracy": 0.861,
+      "rhythm_f1_macro": 0.525
+    },
+    {
+      "repeat": 1,
+      "fold": 3,
+      "test_recordings": [
+        "423",
+        "424",
+        "425",
+        "429",
+        "611"
+      ],
+      "n_train_recordings": 14,
+      "n_val_recordings": 3,
+      "n_test_windows": 2095,
+      "test_dangerous_fraction": 0.1632,
+      "single_class_test_fold": false,
+      "stopped_epoch": 15,
+      "best_val_f1_dangerous": 0.7692,
+      "binary_auc": 0.9453,
+      "binary_f1_dangerous": 0.7341,
+      "binary_accuracy": 0.8921,
+      "rhythm_f1_macro": 0.4852
+    },
+    {
+      "repeat": 1,
+      "fold": 4,
+      "test_recordings": [
+        "418",
+        "426",
+        "428",
+        "614"
+      ],
+      "n_train_recordings": 15,
+      "n_val_recordings": 3,
+      "n_test_windows": 1676,
+      "test_dangerous_fraction": 0.1993,
+      "single_class_test_fold": false,
+      "stopped_epoch": 27,
+      "best_val_f1_dangerous": 0.7,
+      "binary_auc": 0.9543,
+      "binary_f1_dangerous": 0.7862,
+      "binary_accuracy": 0.9039,
+      "rhythm_f1_macro": 0.5671
+    },
+    {
+      "repeat": 1,
+      "fold": 5,
+      "test_recordings": [
+        "427",
+        "607",
+        "612",
+        "615"
+      ],
+      "n_train_recordings": 15,
+      "n_val_recordings": 3,
+      "n_test_windows": 1676,
+      "test_dangerous_fraction": 0.2518,
+      "single_class_test_fold": false,
+      "stopped_epoch": 9,
+      "best_val_f1_dangerous": 0.8207,
+      "binary_auc": 0.913,
+      "binary_f1_dangerous": 0.6046,
+      "binary_accuracy": 0.8455,
+      "rhythm_f1_macro": 0.341
+    },
+    {
+      "repeat": 2,
+      "fold": 1,
+      "test_recordings": [
+        "420",
+        "422",
+        "602",
+        "605",
+        "615"
+      ],
+      "n_train_recordings": 14,
+      "n_val_recordings": 3,
+      "n_test_windows": 2095,
+      "test_dangerous_fraction": 0.1384,
+      "single_class_test_fold": false,
+      "stopped_epoch": 21,
+      "best_val_f1_dangerous": 0.7518,
+      "binary_auc": 0.9833,
+      "binary_f1_dangerous": 0.8525,
+      "binary_accuracy": 0.957,
+      "rhythm_f1_macro": 0.4026
+    },
+    {
+      "repeat": 2,
+      "fold": 2,
+      "test_recordings": [
+        "421",
+        "423",
+        "609",
+        "611"
+      ],
+      "n_train_recordings": 15,
+      "n_val_recordings": 3,
+      "n_test_windows": 1676,
+      "test_dangerous_fraction": 0.2267,
+      "single_class_test_fold": false,
+      "stopped_epoch": 11,
+      "best_val_f1_dangerous": 0.8191,
+      "binary_auc": 0.9803,
+      "binary_f1_dangerous": 0.823,
+      "binary_accuracy": 0.9063,
+      "rhythm_f1_macro": 0.5402
+    },
+    {
+      "repeat": 2,
+      "fold": 3,
+      "test_recordings": [
+        "425",
+        "427",
+        "429",
+        "607",
+        "612"
+      ],
+      "n_train_recordings": 14,
+      "n_val_recordings": 3,
+      "n_test_windows": 2095,
+      "test_dangerous_fraction": 0.21,
+      "single_class_test_fold": false,
+      "stopped_epoch": 28,
+      "best_val_f1_dangerous": 0.4902,
+      "binary_auc": 0.9255,
+      "binary_f1_dangerous": 0.7419,
+      "binary_accuracy": 0.894,
+      "rhythm_f1_macro": 0.4914
+    },
+    {
+      "repeat": 2,
+      "fold": 4,
+      "test_recordings": [
+        "424",
+        "428",
+        "430",
+        "614"
+      ],
+      "n_train_recordings": 15,
+      "n_val_recordings": 3,
+      "n_test_windows": 1676,
+      "test_dangerous_fraction": 0.3103,
+      "single_class_test_fold": false,
+      "stopped_epoch": 13,
+      "best_val_f1_dangerous": 0.7234,
+      "binary_auc": 0.9246,
+      "binary_f1_dangerous": 0.7909,
+      "binary_accuracy": 0.8735,
+      "rhythm_f1_macro": 0.4534
+    },
+    {
+      "repeat": 2,
+      "fold": 5,
+      "test_recordings": [
+        "418",
+        "419",
+        "426",
+        "610"
+      ],
+      "n_train_recordings": 15,
+      "n_val_recordings": 3,
+      "n_test_windows": 1676,
+      "test_dangerous_fraction": 0.2178,
+      "single_class_test_fold": false,
+      "stopped_epoch": 12,
+      "best_val_f1_dangerous": 0.8337,
+      "binary_auc": 0.6414,
+      "binary_f1_dangerous": 0.3881,
+      "binary_accuracy": 0.6689,
+      "rhythm_f1_macro": 0.2576
+    }
+  ],
+  "n_single_class_test_folds": 0,
+  "interval_caveat": "The 95% interval is a t-interval over fold scores. Folds share training recordings, so fold scores are not independent and this interval is OPTIMISTIC \u2014 it understates true uncertainty. It describes spread across folds, not a confidence interval over patients. With 22 recordings this is a limit of the dataset, not of the resampling scheme.",
+  "supersedes": "The single 15/3/4 split reported on 2026-07-30 (test F1(dang) 0.5147 / AUC 0.8046, against val F1 0.894 / AUC 0.984). That point estimate should be quoted only alongside this distribution."
+}

@@ -1,0 +1,30 @@
+{
+  "dataset": "MIT-BIH Arrhythmia (5 AAMI classes), ECG-signal modality",
+  "synthetic": false,
+  "modality_trained": "ecg_signal",
+  "task": "arrhythmia (5 AAMI classes)",
+  "n_train": 2549,
+  "n_val": 450,
+  "n_test": 21892,
+  "evaluation": "held-out MIT-BIH test set",
+  "model_selection": "best macro-F1 on a stratified validation split carved from train (test set never used for selection)",
+  "val_f1_macro_best": 0.5682,
+  "class_weighting": "inverse-frequency class weights on the arrhythmia CE loss",
+  "test_accuracy": 0.8944,
+  "test_f1_macro": 0.5401,
+  "test_auc_macro_ovr": 0.8384,
+  "loss_weighting": "learned homoscedastic uncertainty (Kendall et al., CVPR 2018)",
+  "learned_task_weights": {
+    "arrhythmia": 0.4196,
+    "ef_regression": 0.5,
+    "ef_classification": 0.5,
+    "murmur": 0.5,
+    "ventricular_alert": 0.5,
+    "rhythm": 0.5,
+    "contrastive": 0.5
+  },
+  "multimodal_note": "Single-modality training. Joint 4-modality fusion + contrastive alignment NOT trained \u2014 requires same-patient paired data absent from public benchmarks.",
+  "model_params": 15846411,
+  "training_time_s": 25.2,
+  "device": "cuda"
+}

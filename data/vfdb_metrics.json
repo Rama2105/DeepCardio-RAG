@@ -1,0 +1,26 @@
+{
+  "dataset": "MIT-BIH VFDB (PhysioNet), 22 recordings, 5s windows; 6285 train / 1257 val / 1676 test segments",
+  "synthetic": false,
+  "task": "binary Dangerous-vs-Normal + 4-class rhythm family",
+  "rhythm_classes": [
+    "Normal",
+    "VT",
+    "VF/VFL",
+    "Other_Dangerous"
+  ],
+  "segment_seconds": 5,
+  "n_train": 6285,
+  "n_val": 1257,
+  "n_test": 1676,
+  "split": "patient-independent (whole recordings per split)",
+  "evaluation": "held-out TEST set only (no train-set eval, no random weights)",
+  "test_binary_accuracy": 0.7446,
+  "test_binary_f1_dangerous": 0.5147,
+  "test_binary_auc": 0.8046,
+  "test_rhythm_f1_macro": 0.3444,
+  "best_val_f1_dangerous": 0.894,
+  "model_params": 313958,
+  "training_time_s": 25.5,
+  "device": "cuda",
+  "class_note": "Non-targeted rhythms (AFIB, SBR, etc.) grouped into the Normal/background class; the binary head is the safety-relevant output."
+}

@@ -1,0 +1,435 @@
+{
+  "flagship": {
+    "dataset": "PTB-XL 500Hz (PhysioNet), 3000 records sampled",
+    "synthetic": false,
+    "num_classes": 5,
+    "class_names": [
+      "Normal ECG",
+      "Myocardial Infarction",
+      "ST/T-Wave Change",
+      "Conduction Disturbance",
+      "Hypertrophy"
+    ],
+    "n_train": 2389,
+    "n_val": 296,
+    "n_test": 315,
+    "split": "PTB-XL official folds 1-8/9/10 (patient-independent)",
+    "evaluation": "held-out TEST set only (no train-set eval)",
+    "test_accuracy": 0.5778,
+    "test_f1_macro": 0.4866,
+    "test_auc_macro_ovr": 0.8007,
+    "test_brier": 0.5966,
+    "test_ece": 0.117,
+    "test_per_class_auc": {
+      "NORM": 0.8832,
+      "MI": 0.7817,
+      "STTC": 0.838,
+      "CD": 0.7432,
+      "HYP": 0.7572
+    },
+    "best_val_f1_macro": 0.5418,
+    "model_params": 14453765,
+    "encoder": "transformer_moe",
+    "training_time_s": 209.4,
+    "device": "cuda"
+  },
+  "arrhythmia": {
+    "dataset": "MIT-BIH Arrhythmia (PhysioNet/Kaggle), 5 AAMI classes",
+    "n_train": 2999,
+    "n_test": 21892,
+    "eval_set": "test",
+    "test_accuracy": 0.6065,
+    "test_f1_macro": 0.5086,
+    "test_auc_macro_ovr": 0.9283,
+    "evaluation": "held-out MIT-BIH test split"
+  },
+  "arthritis": {
+    "dataset": "NHANES Medical Conditions Questionnaire (CDC/Kaggle)",
+    "is_fallback_APD": false,
+    "n_records": 3000,
+    "cv_protocol": "5x3 Repeated Stratified K-Fold (preproc+SMOTE inside folds)",
+    "cv_accuracy": {
+      "mean": 0.7622,
+      "std": 0.0162,
+      "ci95": [
+        0.754,
+        0.7704
+      ]
+    },
+    "cv_auc_roc": {
+      "mean": 0.7925,
+      "std": 0.0223,
+      "ci95": [
+        0.7813,
+        0.8038
+      ]
+    },
+    "cv_f1_macro": {
+      "mean": 0.6844,
+      "std": 0.0198,
+      "ci95": [
+        0.6744,
+        0.6943
+      ]
+    },
+    "cv_brier": {
+      "mean": 0.1624,
+      "std": 0.0105,
+      "ci95": [
+        0.1571,
+        0.1677
+      ]
+    },
+    "holdout_accuracy": 0.77,
+    "holdout_auc_roc": 0.8127,
+    "holdout_f1": 0.7024,
+    "total_features": 17,
+    "top_features": [
+      {
+        "feature": "age_risk",
+        "importance": 0.157
+      },
+      {
+        "feature": "age_squared",
+        "importance": 0.1281
+      },
+      {
+        "feature": "Age",
+        "importance": 0.1154
+      },
+      {
+        "feature": "bmi_squared",
+        "importance": 0.0687
+      },
+      {
+        "feature": "BMI",
+        "importance": 0.0643
+      },
+      {
+        "feature": "obesity_flag",
+        "importance": 0.0599
+      },
+      {
+        "feature": "PovertyRatio",
+        "importance": 0.0553
+      },
+      {
+        "feature": "SystolicBP",
+        "importance": 0.0509
+      },
+      {
+        "feature": "DiastolicBP",
+        "importance": 0.0501
+      },
+      {
+        "feature": "Gender_M",
+        "importance": 0.0496
+      },
+      {
+        "feature": "map",
+        "importance": 0.0474
+      },
+      {
+        "feature": "age_gender",
+        "importance": 0.0452
+      }
+    ],
+    "evaluation": "repeated-CV mean±95% CI (headline) + 20% held-out split"
+  },
+  "cardiofusion": {
+    "dataset": "MIT-BIH Arrhythmia (5 AAMI classes), ECG-signal modality",
+    "modality_trained": "ecg_signal",
+    "n_train": 2549,
+    "n_test": 21892,
+    "test_accuracy": 0.8944,
+    "test_f1_macro": 0.5401,
+    "test_auc_macro_ovr": 0.8384,
+    "loss_weighting": "learned homoscedastic uncertainty (Kendall et al., CVPR 2018)",
+    "learned_task_weights": {
+      "arrhythmia": 0.4196,
+      "ef_regression": 0.5,
+      "ef_classification": 0.5,
+      "murmur": 0.5,
+      "ventricular_alert": 0.5,
+      "rhythm": 0.5,
+      "contrastive": 0.5
+    },
+    "multimodal_note": "Single-modality training. Joint 4-modality fusion + contrastive alignment NOT trained — requires same-patient paired data absent from public benchmarks.",
+    "evaluation": "held-out MIT-BIH test set"
+  },
+  "echo": {
+    "error": "EchoNet-Dynamic not found. Place it under data/EchoNet-Dynamic/ (Videos/ + FileList.csv) or request access from Stanford AIMI. For a mechanics-only smoke test call train_echonet(synthetic=True)."
+  },
+  "pcg": {
+    "dataset": "CirCor DigiScope (PhysioNet), 942 subjects; 2057 train / 480 val / 626 test recordings",
+    "synthetic": false,
+    "task": "3-class murmur {Absent, Present, Unknown} + Present-vs-Absent AUC",
+    "classes": [
+      "Absent",
+      "Present",
+      "Unknown"
+    ],
+    "n_train": 2057,
+    "n_val": 480,
+    "n_test": 626,
+    "split": "patient-independent (subject-level)",
+    "evaluation": "held-out TEST set only (no train-set eval)",
+    "test_accuracy": 0.7604,
+    "test_f1_macro": 0.5347,
+    "test_per_class_f1": {
+      "Absent": 0.8616,
+      "Present": 0.4776,
+      "Unknown": 0.2651
+    },
+    "test_present_vs_absent_auc": 0.7611,
+    "best_val_f1_macro": 0.5539,
+    "model_params": 44707,
+    "training_time_s": 1249.3,
+    "device": "cuda",
+    "run_date": "2026-08-01",
+    "leakage_fix_verified": "Loader reported 942 subjects (the contaminated run counted 962), and zero recordings were skipped for a missing metadata row - all 3163 .wav files reconciled to a real subject, so the 20 phantom ids are gone rather than merely excluded.",
+    "selection_caveat": "Validation macro-F1 is unstable across epochs (0.159, 0.554, 0.115, 0.454, 0.367, 0.448, 0.367, 0.546); early stopping selected the epoch-2 checkpoint from that noisy curve. Val 0.5539 vs test 0.5347 shows no val overfit, so the figure is honest, but a single run is not a reliable point estimate - quote test_present_vs_absent_auc as the steadier headline and do not present macro-F1 as precise. Repeated runs or subject-level cross-validation are needed for a defensible interval.",
+    "class_note": "'Unknown' is a real CirCor annotation meaning auscultation was inconclusive, not a missing-data marker. Its F1 stays low (0.2651) because the class is genuinely hard and rare, not because of the id-parsing defect - that defect is fixed and no longer feeds this class.",
+    "benchmark_note": "Oliveira et al. CirCor JBHI 2022 report ~0.79 weighted murmur accuracy; this genuine run is reported without claiming that value.",
+    "withdrawn_previous_result": {
+      "values": {
+        "test_accuracy": 0.6438,
+        "test_f1_macro": 0.5318,
+        "test_present_vs_absent_auc": 0.7981,
+        "test_per_class_f1": {
+          "Absent": 0.763,
+          "Present": 0.5634,
+          "Unknown": 0.2691
+        }
+      },
+      "date_withdrawn": "2026-07-30",
+      "date_superseded": "2026-08-01",
+      "reason": "PATIENT LEAKAGE. heart_sound_loader parsed the subject id with base.rsplit('_', 1), which splits CirCor repeat-recording names on the LAST underscore: '50204_MV_1.wav' yielded patient_id '50204_MV' instead of '50204'. Effects: (1) 20 phantom patients (962 counted vs 942 real), (2) those ids missed the metadata table so their murmur label silently defaulted to the 'Unknown' CLASS - conflating 'no metadata row' with the real annotation meaning 'auscultation inconclusive', which is why Unknown F1 was worst at 0.269, and (3) the subject-level split treated '50204_MV' and '50204' as different people, so one patient's recordings could appear in BOTH train and test.",
+      "fix": "sid now parsed with base.partition('_') (part before the FIRST underscore); recordings with no metadata row are excluded and counted rather than labelled 'Unknown'.",
+      "outcome": "Re-run on 2026-08-01 after the fix. Present-vs-Absent AUC fell 0.7981 -> 0.7611, the direction leakage removal predicts. Accuracy ROSE 0.6438 -> 0.7604 because the 20 phantom ids previously missed the metadata table and were force-labelled 'Unknown'; they now carry their true labels, mostly the majority class 'Absent'."
+    },
+    "data_integrity": "RESOLVED 2026-07-31. 85286_AV.wav was truncated (header declared 161280 data bytes, file held 15974) because the first download was killed mid-write and the resume used wget -nc, which skips any file that EXISTS without checking completeness. Repaired by wget -r -N -c, which issued a range request and returned '206 Partial Content ... saved [161324/161324]' - full size, verified by byte count, not assumed. CirCor completeness confirmed: RECORDS 3163 with 3163 each of .hea/.wav/.tsv on disk. Byte-level verification of all 9489 files against the shipped SHA256SUMS.txt remains optional insurance against a hypothetical second corrupt file."
+  },
+  "vfdb": {
+    "dataset": "MIT-BIH VFDB (PhysioNet), 22 recordings, 5s windows; 6285 train / 1257 val / 1676 test segments",
+    "synthetic": false,
+    "task": "binary Dangerous-vs-Normal + 4-class rhythm family",
+    "rhythm_classes": [
+      "Normal",
+      "VT",
+      "VF/VFL",
+      "Other_Dangerous"
+    ],
+    "segment_seconds": 5,
+    "n_train": 6285,
+    "n_val": 1257,
+    "n_test": 1676,
+    "split": "patient-independent (whole recordings per split)",
+    "evaluation": "held-out TEST set only (no train-set eval, no random weights)",
+    "test_binary_accuracy": 0.7446,
+    "test_binary_f1_dangerous": 0.5147,
+    "test_binary_auc": 0.8046,
+    "test_rhythm_f1_macro": 0.3444,
+    "best_val_f1_dangerous": 0.894,
+    "model_params": 313958,
+    "training_time_s": 25.5,
+    "device": "cuda",
+    "class_note": "Non-targeted rhythms (AFIB, SBR, etc.) grouped into the Normal/background class; the binary head is the safety-relevant output.",
+    "withdrawn_previous_result": {
+      "values": {
+        "test_binary_accuracy": 1.0,
+        "test_binary_f1_dangerous": 0.0,
+        "test_binary_auc": "NaN",
+        "test_rhythm_f1_macro": 1.0
+      },
+      "date_withdrawn": "2026-07-30",
+      "reason": "NOT REPORTABLE - artifact of a single-class dataset, not a model result. core/vfdb_loader.read_atr fell back to a hand-rolled WFDB byte parser (wfdb.rdann raised OverflowError under NumPy 2) whose SKIP handling byte-swapped the 32-bit interval, producing annotation offsets up to 1.99e10 on a 525000-sample signal. Every window therefore fell before the first valid annotation and was labelled Normal: 0 dangerous segments in train/val/test. Accuracy 1.0 and rhythm_f1 1.0 were the trivial single-class solution; F1(dangerous) 0.0 and AUC NaN show the detector never fired.",
+      "fix": "wfdb upgraded to 4.3.1 (pandas 2.2.3); read_atr now uses wfdb.rdann and reports parse failures instead of silently falling back; train_vfdb raises if any split is single-class."
+    },
+    "small_n_caveat": "22 recordings. The 15/3/4 single split (test F1(dang) 0.5147 / AUC 0.8046 vs val F1 0.894 / AUC 0.984) is one draw and is NOT the headline - see cross_validation. Its low value was an unlucky 4-recording test fold, not leakage: 2x5-fold recording-level CV puts 9 of 10 folds at AUC 0.913-0.983 and the single split val AUC 0.984 already matched that bulk. Genuine downside variance remains (one fold at AUC 0.6414 / F1 0.3881).",
+    "rhythm_head_caveat": "4-class macro-F1 is underpowered - ASYS/HGEA/VER are rare. CV mean 0.4512 [0.3831, 0.5193]. Do NOT quote the rhythm head as a strength; the binary Dangerous-vs-Normal head is the safety-relevant output.",
+    "headline": "cross_validation (below) is the reportable result; the single-split test_* fields are one draw retained for provenance.",
+    "cross_validation": {
+      "protocol": "2x repeated 5-fold cross-validation, folds are WHOLE RECORDINGS stratified by dangerous-window fraction; validation recordings drawn from the training pool only",
+      "evaluation": "each test fold scored exactly once, after early stopping on val F1",
+      "n_recordings": 22,
+      "n_folds": 5,
+      "n_repeats": 2,
+      "n_fits": 10,
+      "epochs_max": 30,
+      "device": "cuda",
+      "runtime_s": 176.8,
+      "n_single_class_test_folds": 0,
+      "date_run": "2026-08-04",
+      "aggregate": {
+        "binary_auc": {
+          "mean": 0.9187,
+          "ci95_low": 0.8466,
+          "ci95_high": 0.9907,
+          "n_folds_used": 10
+        },
+        "binary_f1_dangerous": {
+          "mean": 0.7184,
+          "ci95_low": 0.6217,
+          "ci95_high": 0.8151,
+          "n_folds_used": 10
+        },
+        "binary_accuracy": {
+          "mean": 0.8672,
+          "ci95_low": 0.8127,
+          "ci95_high": 0.9216,
+          "n_folds_used": 10
+        },
+        "rhythm_f1_macro": {
+          "mean": 0.4512,
+          "ci95_low": 0.3831,
+          "ci95_high": 0.5193,
+          "n_folds_used": 10
+        }
+      },
+      "observed_fold_range": {
+        "binary_auc": [
+          0.6414,
+          0.9833
+        ],
+        "binary_f1_dangerous": [
+          0.3881,
+          0.8525
+        ],
+        "binary_accuracy": [
+          0.6689,
+          0.957
+        ],
+        "rhythm_f1_macro": [
+          0.2576,
+          0.5671
+        ]
+      },
+      "interval_caveat": "The 95% interval is a t-interval over fold scores. Folds share training recordings, so fold scores are not independent and this interval is OPTIMISTIC — it understates true uncertainty. It describes spread across folds, not a confidence interval over patients. With 22 recordings this is a limit of the dataset, not of the resampling scheme.",
+      "range_note": "Quote the observed_fold_range alongside the interval. The superseded single split scored AUC 0.8046 which lies BELOW this interval low of 0.8466 - a prior recording-level estimate falling outside the interval is direct evidence the t-interval is too narrow, as interval_caveat warns.",
+      "source_file": "data/vfdb_cv_metrics.json"
+    }
+  },
+  "heartdisease": {
+    "dataset": "UCI Cleveland Heart Disease (Detrano et al. 1989), Kaggle johnsmith88 mirror",
+    "n_raw_rows": 1025,
+    "n_unique_records": 302,
+    "dedup_note": "Kaggle file duplicates the 303-record Cleveland cohort; trained on unique rows only.",
+    "num_features": 21,
+    "cv_protocol": "5x3 Repeated Stratified K-Fold (impute+scale inside folds)",
+    "cv": {
+      "bert_moe": {
+        "acc": {
+          "mean": 0.7967,
+          "std": 0.0335,
+          "ci95": [
+            0.7797,
+            0.8136
+          ]
+        },
+        "auc": {
+          "mean": 0.8718,
+          "std": 0.0244,
+          "ci95": [
+            0.8594,
+            0.8841
+          ]
+        },
+        "f1": {
+          "mean": 0.7939,
+          "std": 0.0336,
+          "ci95": [
+            0.7768,
+            0.8109
+          ]
+        },
+        "brier": {
+          "mean": 0.1749,
+          "std": 0.0301,
+          "ci95": [
+            0.1596,
+            0.1901
+          ]
+        }
+      },
+      "logistic": {
+        "acc": {
+          "mean": 0.8272,
+          "std": 0.0223,
+          "ci95": [
+            0.8159,
+            0.8384
+          ]
+        },
+        "auc": {
+          "mean": 0.8921,
+          "std": 0.0118,
+          "ci95": [
+            0.8861,
+            0.898
+          ]
+        },
+        "f1": {
+          "mean": 0.8238,
+          "std": 0.0228,
+          "ci95": [
+            0.8123,
+            0.8354
+          ]
+        },
+        "brier": {
+          "mean": 0.1316,
+          "std": 0.01,
+          "ci95": [
+            0.1266,
+            0.1367
+          ]
+        }
+      },
+      "gbt": {
+        "acc": {
+          "mean": 0.8,
+          "std": 0.0182,
+          "ci95": [
+            0.7908,
+            0.8092
+          ]
+        },
+        "auc": {
+          "mean": 0.8833,
+          "std": 0.0123,
+          "ci95": [
+            0.8771,
+            0.8896
+          ]
+        },
+        "f1": {
+          "mean": 0.7975,
+          "std": 0.0188,
+          "ci95": [
+            0.788,
+            0.807
+          ]
+        },
+        "brier": {
+          "mean": 0.147,
+          "std": 0.0143,
+          "ci95": [
+            0.1398,
+            0.1543
+          ]
+        }
+      }
+    },
+    "holdout_25pct_bert_moe": {
+      "accuracy": 0.7763,
+      "auc_roc": 0.8551,
+      "f1": 0.7753,
+      "brier": 0.1812
+    },
+    "evaluation": "repeated-CV mean±95% CI (headline) + 25% held-out; NO train-set eval",
+    "baseline_comparison_note": "Logistic and GBT reported on identical folds (reviewer R8): a BERT-MoE must beat plain baselines to justify its complexity.",
+    "training_time_s": 92.1,
+    "device": "cuda"
+  }
+}

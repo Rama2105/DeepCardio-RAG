@@ -1,0 +1,34 @@
+{
+  "dataset": "PTB-XL 500Hz (PhysioNet), 3000 records sampled",
+  "synthetic": false,
+  "num_classes": 5,
+  "class_names": [
+    "Normal ECG",
+    "Myocardial Infarction",
+    "ST/T-Wave Change",
+    "Conduction Disturbance",
+    "Hypertrophy"
+  ],
+  "n_train": 2389,
+  "n_val": 296,
+  "n_test": 315,
+  "split": "PTB-XL official folds 1-8/9/10 (patient-independent)",
+  "evaluation": "held-out TEST set only (no train-set eval)",
+  "test_accuracy": 0.5778,
+  "test_f1_macro": 0.4866,
+  "test_auc_macro_ovr": 0.8007,
+  "test_brier": 0.5966,
+  "test_ece": 0.117,
+  "test_per_class_auc": {
+    "NORM": 0.8832,
+    "MI": 0.7817,
+    "STTC": 0.838,
+    "CD": 0.7432,
+    "HYP": 0.7572
+  },
+  "best_val_f1_macro": 0.5418,
+  "model_params": 14453765,
+  "encoder": "transformer_moe",
+  "training_time_s": 209.4,
+  "device": "cuda"
+}

@@ -1,0 +1,36 @@
+1. Prompt1: write research paper of this work with  results attachment with good title ,abstract , key words , Introduction with verfied sourse  only , recent survay with 30 verfied refernces , propsed methdology with diagarams , proper mathematics , 5   proper algorithms , results and anlaysis , conclusion , refernces with write in latex and pdf.
+2. Prompt2:
+convert this format of above work "Craft a comprehensive research paper on [Topic] using [Methodology], mirroring the style of "Computational Intelligence" journal. Emulate human-like writing, avoiding AI-generated tone and phrases.
+- Develop a compelling narrative, weaving together:
+    - Introduction (5-10 pages): Contextualize the research, highlighting its significance and relevance. Introduce the research question, objectives, and contributions.
+    - Related Work (5-10 pages): Delve into existing literature, pinpointing gaps and opportunities. Critically evaluate prior art, highlighting limitations and areas for improvement.
+    - Methodology (5-10 pages): Unfold your approach, explaining the rationale behind your choices. Describe the research design, data collection, and analysis techniques.
+    - Mathematics and Theoretical Analysis (5-10 pages): Derive and explain key equations, theorems, or models. Provide theoretical foundations and mathematical justifications.
+    - Algorithms (5-10 pages): Present your algorithmic contributions, with pseudocode or code snippets. Discuss complexity, scalability, and potential optimizations.
+    - Results and Analysis (5-10 pages): Showcase findings, using figures, tables, and visualizations. Interpret results, highlighting trends, patterns, and insights.
+    - Discussion (5-10 pages): Interpret results, contrasting with prior art and highlighting implications. Discuss limitations, potential applications, and future directions.
+    - Conclusion (1-2 pages): Summarize key takeaways and future directions.
+- Incorporate the following visual aids:
+    - Fig. 1: System architecture/block diagram of the proposed methodology
+    - Fig. 2: Flowchart of the algorithm
+    - Fig. 3: Plot of simulation results (e.g., line graph, bar chart)
+    - Fig. 4: Comparison plot of results with prior work
+    - Fig. 5: Visual representation of key findings (e.g., heatmap, scatter plot)
+    - Diagram 1: Detailed architecture of the proposed system
+    - Diagram 2: Sequence diagram of the algorithm
+    - Diagram 3: State machine diagram of the system
+    - Table 1: Summary of mathematical notations and symbols
+    - Table 2: Comparison of results with prior work
+- Attach supplementary materials, like code, in Appendix A.
+- Ensure originality and avoid plagiarism.
+- Adhere to "Computational Intelligence"  Journal's guidelines and formatting.
+- Use clear, concise language, avoiding jargon and technical terms unless essential.
+- Include 50-100 references, citing relevant works in the field.
+- Use IEEE-style citations, with a consistent formatting scheme throughout.
+Target length: 30-40 pages.
+*Submission Requirements:*
+- LaTeX source files (.tex)
+- PDF output (.pdf)
+- All figures, diagrams, and tables in separate files (e.g., .eps, .pdf, .png)
+- Code and supplementary materials in Appendix A
+*LaTeX Template:* plz revise latex and pdf with proper adjustemts

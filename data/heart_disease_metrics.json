@@ -1,0 +1,122 @@
+{
+  "dataset": "UCI Cleveland Heart Disease (Detrano et al. 1989), Kaggle johnsmith88 mirror",
+  "n_raw_rows": 1025,
+  "n_unique_records": 302,
+  "dedup_note": "Kaggle file duplicates the 303-record Cleveland cohort; trained on unique rows only.",
+  "num_features": 21,
+  "cv_protocol": "5x3 Repeated Stratified K-Fold (impute+scale inside folds)",
+  "cv": {
+    "bert_moe": {
+      "acc": {
+        "mean": 0.7967,
+        "std": 0.0335,
+        "ci95": [
+          0.7797,
+          0.8136
+        ]
+      },
+      "auc": {
+        "mean": 0.8718,
+        "std": 0.0244,
+        "ci95": [
+          0.8594,
+          0.8841
+        ]
+      },
+      "f1": {
+        "mean": 0.7939,
+        "std": 0.0336,
+        "ci95": [
+          0.7768,
+          0.8109
+        ]
+      },
+      "brier": {
+        "mean": 0.1749,
+        "std": 0.0301,
+        "ci95": [
+          0.1596,
+          0.1901
+        ]
+      }
+    },
+    "logistic": {
+      "acc": {
+        "mean": 0.8272,
+        "std": 0.0223,
+        "ci95": [
+          0.8159,
+          0.8384
+        ]
+      },
+      "auc": {
+        "mean": 0.8921,
+        "std": 0.0118,
+        "ci95": [
+          0.8861,
+          0.898
+        ]
+      },
+      "f1": {
+        "mean": 0.8238,
+        "std": 0.0228,
+        "ci95": [
+          0.8123,
+          0.8354
+        ]
+      },
+      "brier": {
+        "mean": 0.1316,
+        "std": 0.01,
+        "ci95": [
+          0.1266,
+          0.1367
+        ]
+      }
+    },
+    "gbt": {
+      "acc": {
+        "mean": 0.8,
+        "std": 0.0182,
+        "ci95": [
+          0.7908,
+          0.8092
+        ]
+      },
+      "auc": {
+        "mean": 0.8833,
+        "std": 0.0123,
+        "ci95": [
+          0.8771,
+          0.8896
+        ]
+      },
+      "f1": {
+        "mean": 0.7975,
+        "std": 0.0188,
+        "ci95": [
+          0.788,
+          0.807
+        ]
+      },
+      "brier": {
+        "mean": 0.147,
+        "std": 0.0143,
+        "ci95": [
+          0.1398,
+          0.1543
+        ]
+      }
+    }
+  },
+  "holdout_25pct_bert_moe": {
+    "accuracy": 0.7763,
+    "auc_roc": 0.8551,
+    "f1": 0.7753,
+    "brier": 0.1812
+  },
+  "evaluation": "repeated-CV mean\u00b195% CI (headline) + 25% held-out; NO train-set eval",
+  "baseline_comparison_note": "Logistic and GBT reported on identical folds (reviewer R8): a BERT-MoE must beat plain baselines to justify its complexity.",
+  "training_time_s": 92.1,
+  "device": "cuda"
+}

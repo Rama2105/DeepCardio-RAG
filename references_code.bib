@@ -1,0 +1,192 @@
+% ============================================================================
+% references_code.bib — Top-tier citations for the DeepCardio-RAG CODE
+% ----------------------------------------------------------------------------
+% Kept SEPARATE from references.bib (the IEEE TCE paper's bibliography) so the
+% paper file is untouched. Every entry here corresponds to a method, dataset, or
+% metric ACTUALLY implemented/used in the training & evaluation code, and every
+% venue is a top journal or conference (Nature family, IEEE, NeurIPS, ICML,
+% ICLR, CVPR, EMNLP, NAACL, KDD, SIGMOD, JAIR, Annals of Statistics, ACM TOIS).
+%
+% Where used (module -> key):
+%   core/train_ptbxl.py        -> wagner2020ptbxl, vaswani2017attention,
+%                                 shazeer2017moe, he2016resnet, guo2017calibration,
+%                                 loshchilov2019adamw
+%   core/ecg_arrhythmia_*.py   -> moody2001mitbih, goldberger2000physionet
+%   core/arthritis_pipeline.py -> cdc_nhanes, breiman2001rf, friedman2001gbm,
+%                                 chawla2002smote
+%   core/hybrid_model.py       -> kendall2018uncertainty, ma2018mmoe,
+%                                 vaswani2017attention, ouyang2020echonet,
+%                                 oliveira2022circor
+%   core/pipeline.py (RAG)     -> lewis2020rag, reimers2019sbert, song2020mpnet,
+%                                 wang2021milvus, devlin2019bert
+%   core/rag_eval.py           -> jarvelin2002ndcg
+% ============================================================================
+
+% ---- Benchmark datasets ----------------------------------------------------
+@article{wagner2020ptbxl,
+  title   = {{PTB-XL}, a large publicly available electrocardiography dataset},
+  author  = {Wagner, Patrick and Strodthoff, Nils and Bousseljot, Ralf-Dieter and Kreiseler, Dieter and Lunze, Fatima I. and Samek, Wojciech and Schaeffter, Tobias},
+  journal = {Scientific Data},
+  volume  = {7}, number = {1}, pages = {154}, year = {2020},
+  publisher = {Nature Publishing Group},
+  doi     = {10.1038/s41597-020-0495-6}
+}
+
+@article{moody2001mitbih,
+  title   = {The impact of the {MIT-BIH} Arrhythmia Database},
+  author  = {Moody, George B. and Mark, Roger G.},
+  journal = {IEEE Engineering in Medicine and Biology Magazine},
+  volume  = {20}, number = {3}, pages = {45--50}, year = {2001},
+  doi     = {10.1109/51.932724}
+}
+
+@article{goldberger2000physionet,
+  title   = {{PhysioBank}, {PhysioToolkit}, and {PhysioNet}: components of a new research resource for complex physiologic signals},
+  author  = {Goldberger, Ary L. and Amaral, Luis A. N. and Glass, Leon and Hausdorff, Jeffrey M. and Ivanov, Plamen Ch. and Mark, Roger G. and Mietus, Joseph E. and Moody, George B. and Peng, Chung-Kang and Stanley, H. Eugene},
+  journal = {Circulation},
+  volume  = {101}, number = {23}, pages = {e215--e220}, year = {2000},
+  doi     = {10.1161/01.CIR.101.23.e215}
+}
+
+@misc{cdc_nhanes,
+  title        = {National Health and Nutrition Examination Survey ({NHANES}), Medical Conditions Questionnaire},
+  author       = {{Centers for Disease Control and Prevention (CDC), National Center for Health Statistics}},
+  howpublished = {U.S. Department of Health and Human Services},
+  year         = {2020}
+}
+
+@article{ouyang2020echonet,
+  title   = {Video-based {AI} for beat-to-beat assessment of cardiac function},
+  author  = {Ouyang, David and He, Bryan and Ghorbani, Amirata and Yuan, Neal and Ebinger, Joseph and Langlotz, Curtis P. and Heidenreich, Paul A. and Harrington, Robert A. and Liang, David H. and Ashley, Euan A. and Zou, James Y.},
+  journal = {Nature},
+  volume  = {580}, number = {7802}, pages = {252--256}, year = {2020},
+  doi     = {10.1038/s41586-020-2145-8}
+}
+
+@article{oliveira2022circor,
+  title   = {The {CirCor} {DigiScope} Dataset: From Murmur Detection to Murmur Classification},
+  author  = {Oliveira, Jorge and Renna, Francesco and Costa, Paulo Dias and Nogueira, Marcelo and Oliveira, Cristina and Ferreira, Carlos and Jorge, Alipio and Mattos, Sandra and Hatem, Thamine and Tavares, Thiago and Elola, Andoni and Rad, Ali Bahrami and Sameni, Reza and Clifford, Gari D. and Coimbra, Miguel T.},
+  journal = {IEEE Journal of Biomedical and Health Informatics},
+  volume  = {26}, number = {6}, pages = {2524--2535}, year = {2022},
+  doi     = {10.1109/JBHI.2021.3137048}
+}
+
+% ---- Core architectures ----------------------------------------------------
+@inproceedings{vaswani2017attention,
+  title     = {Attention is All you Need},
+  author    = {Vaswani, Ashish and Shazeer, Noam and Parmar, Niki and Uszkoreit, Jakob and Jones, Llion and Gomez, Aidan N. and Kaiser, Lukasz and Polosukhin, Illia},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  volume    = {30}, year = {2017}
+}
+
+@inproceedings{shazeer2017moe,
+  title     = {Outrageously Large Neural Networks: The Sparsely-Gated Mixture-of-Experts Layer},
+  author    = {Shazeer, Noam and Mirhoseini, Azalia and Maziarz, Krzysztof and Davis, Andy and Le, Quoc and Hinton, Geoffrey and Dean, Jeff},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2017}
+}
+
+@inproceedings{he2016resnet,
+  title     = {Deep Residual Learning for Image Recognition},
+  author    = {He, Kaiming and Zhang, Xiangyu and Ren, Shaoqing and Sun, Jian},
+  booktitle = {IEEE Conference on Computer Vision and Pattern Recognition (CVPR)},
+  pages     = {770--778}, year = {2016}, doi = {10.1109/CVPR.2016.90}
+}
+
+@inproceedings{devlin2019bert,
+  title     = {{BERT}: Pre-training of Deep Bidirectional Transformers for Language Understanding},
+  author    = {Devlin, Jacob and Chang, Ming-Wei and Lee, Kenton and Toutanova, Kristina},
+  booktitle = {Proceedings of NAACL-HLT},
+  pages     = {4171--4186}, year = {2019}
+}
+
+% ---- Retrieval-augmented generation & embeddings ---------------------------
+@inproceedings{lewis2020rag,
+  title     = {Retrieval-Augmented Generation for Knowledge-Intensive {NLP} Tasks},
+  author    = {Lewis, Patrick and Perez, Ethan and Piktus, Aleksandra and Petroni, Fabio and Karpukhin, Vladimir and Goyal, Naman and K{\"u}ttler, Heinrich and Lewis, Mike and Yih, Wen-tau and Rockt{\"a}schel, Tim and Riedel, Sebastian and Kiela, Douwe},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  volume    = {33}, pages = {9459--9474}, year = {2020}
+}
+
+@inproceedings{reimers2019sbert,
+  title     = {{Sentence-BERT}: Sentence Embeddings using Siamese {BERT}-Networks},
+  author    = {Reimers, Nils and Gurevych, Iryna},
+  booktitle = {Proceedings of EMNLP-IJCNLP},
+  pages     = {3982--3992}, year = {2019}
+}
+
+@inproceedings{song2020mpnet,
+  title     = {{MPNet}: Masked and Permuted Pre-training for Language Understanding},
+  author    = {Song, Kaitao and Tan, Xu and Qin, Tao and Lu, Jianfeng and Liu, Tie-Yan},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  volume    = {33}, year = {2020}
+}
+
+@article{wang2021milvus,
+  title   = {Milvus: A Purpose-Built Vector Data Management System},
+  author  = {Wang, Jianguo and Yi, Xiaomeng and Guo, Rentong and Jin, Hai and Xu, Peng and Li, Shengjun and Wang, Xiangyu and Guo, Xiangzhou and Li, Chengming and Xu, Xiaohai},
+  journal = {Proceedings of the ACM SIGMOD International Conference on Management of Data},
+  pages   = {2614--2627}, year = {2021}, doi = {10.1145/3448016.3457550}
+}
+
+% ---- Multi-task learning & calibration -------------------------------------
+@inproceedings{kendall2018uncertainty,
+  title     = {Multi-Task Learning Using Uncertainty to Weigh Losses for Scene Geometry and Semantics},
+  author    = {Kendall, Alex and Gal, Yarin and Cipolla, Roberto},
+  booktitle = {IEEE Conference on Computer Vision and Pattern Recognition (CVPR)},
+  pages     = {7482--7491}, year = {2018}, doi = {10.1109/CVPR.2018.00781}
+}
+
+@inproceedings{ma2018mmoe,
+  title     = {Modeling Task Relationships in Multi-task Learning with Multi-gate Mixture-of-Experts},
+  author    = {Ma, Jiaqi and Zhao, Zhe and Yi, Xinyang and Chen, Jilin and Hong, Lichan and Chi, Ed H.},
+  booktitle = {Proceedings of the 24th ACM SIGKDD International Conference on Knowledge Discovery \& Data Mining (KDD)},
+  pages     = {1930--1939}, year = {2018}, doi = {10.1145/3219819.3220007}
+}
+
+@inproceedings{guo2017calibration,
+  title     = {On Calibration of Modern Neural Networks},
+  author    = {Guo, Chuan and Pleiss, Geoff and Sun, Yu and Weinberger, Kilian Q.},
+  booktitle = {International Conference on Machine Learning (ICML)},
+  pages     = {1321--1330}, year = {2017}
+}
+
+% ---- Classical ML: ensembles, imbalance, optimisation ----------------------
+@article{breiman2001rf,
+  title   = {Random Forests},
+  author  = {Breiman, Leo},
+  journal = {Machine Learning},
+  volume  = {45}, number = {1}, pages = {5--32}, year = {2001},
+  doi     = {10.1023/A:1010933404324}
+}
+
+@article{friedman2001gbm,
+  title   = {Greedy Function Approximation: A Gradient Boosting Machine},
+  author  = {Friedman, Jerome H.},
+  journal = {The Annals of Statistics},
+  volume  = {29}, number = {5}, pages = {1189--1232}, year = {2001},
+  doi     = {10.1214/aos/1013203451}
+}
+
+@article{chawla2002smote,
+  title   = {{SMOTE}: Synthetic Minority Over-sampling Technique},
+  author  = {Chawla, Nitesh V. and Bowyer, Kevin W. and Hall, Lawrence O. and Kegelmeyer, W. Philip},
+  journal = {Journal of Artificial Intelligence Research (JAIR)},
+  volume  = {16}, pages = {321--357}, year = {2002}, doi = {10.1613/jair.953}
+}
+
+@inproceedings{loshchilov2019adamw,
+  title     = {Decoupled Weight Decay Regularization},
+  author    = {Loshchilov, Ilya and Hutter, Frank},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2019}
+}
+
+% ---- Evaluation metrics ----------------------------------------------------
+@article{jarvelin2002ndcg,
+  title   = {Cumulated Gain-Based Evaluation of {IR} Techniques},
+  author  = {J{\"a}rvelin, Kalervo and Kek{\"a}l{\"a}inen, Jaana},
+  journal = {ACM Transactions on Information Systems (TOIS)},
+  volume  = {20}, number = {4}, pages = {422--446}, year = {2002},
+  doi     = {10.1145/582415.582418}
+}

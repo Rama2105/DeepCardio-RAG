@@ -1,0 +1,80 @@
+version: "3.9"
+
+services:
+  # ── DeepCardio FastAPI backend ──────────────────────────────────────────────
+  backend:
+    build: .
+    container_name: deepcardio_backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data           # dataset files (EchoNet, VFDB, APD)
+      - ./logs:/app/logs           # persistent logs
+      - ./database:/app/database   # Milvus Lite .db file
+    environment:
+      - ENVIRONMENT=production
+      - LOG_LEVEL=INFO
+      - SECRET_KEY=${SECRET_KEY:-CHANGE_IN_PRODUCTION}
+      - VECTOR_DB_BACKEND=${VECTOR_DB_BACKEND:-faiss}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
+      - MAX_UPLOAD_MB=100
+    depends_on:
+      - milvus
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── Milvus standalone (for production vector search) ────────────────────────
+  milvus:
+    image: milvusdb/milvus:v2.4.0
+    container_name: deepcardio_milvus
+    environment:
+      ETCD_ENDPOINTS: etcd:2379
+      MINIO_ADDRESS: minio:9000
+    volumes:
+      - milvus_data:/var/lib/milvus
+    ports:
+      - "19530:19530"
+    depends_on:
+      - etcd
+      - minio
+    restart: unless-stopped
+
+  etcd:
+    image: quay.io/coreos/etcd:v3.5.5
+    container_name: deepcardio_etcd
+    environment:
+      - ETCD_AUTO_COMPACTION_MODE=revision
+      - ETCD_AUTO_COMPACTION_RETENTION=1000
+      - ETCD_QUOTA_BACKEND_BYTES=4294967296
+      - ETCD_SNAPSHOT_COUNT=50000
+    command: >
+      etcd
+      --advertise-client-urls=http://127.0.0.1:2379
+      --listen-client-urls=http://0.0.0.0:2379
+      --data-dir=/etcd
+    volumes:
+      - etcd_data:/etcd
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:RELEASE.2023-03-13T19-46-17Z
+    container_name: deepcardio_minio
+    environment:
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+    command: minio server /minio_data --console-address ":9001"
+    volumes:
+      - minio_data:/minio_data
+    ports:
+      - "9001:9001"
+    restart: unless-stopped
+
+volumes:
+  milvus_data:
+  etcd_data:
+  minio_data:

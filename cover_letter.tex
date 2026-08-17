@@ -1,0 +1,38 @@
+\documentclass[a4paper,11pt]{letter}
+\usepackage[top=2cm,bottom=2cm,left=2.8cm,right=2.8cm]{geometry}
+\usepackage[hidelinks]{hyperref}
+\usepackage{parskip}
+\setlength{\parskip}{4pt}
+
+\begin{document}
+
+\begin{letter}{The Editor-in-Chief\\
+\textit{Cluster Computing}, Springer Nature}
+
+\opening{Dear Editor-in-Chief,}
+
+We are pleased to submit our original research manuscript entitled \textbf{``DeepCardio-RAG: A Multi-Modal Retrieval-Augmented Generation Framework for AI-Assisted Cardiac Diagnosis Integrating ECG, Echocardiography, Heart Sound, Ventricular Arrhythmia, and Arthritis Risk Classification''} for consideration for publication in \textit{Cluster Computing}.
+
+\textbf{Relevance to Cluster Computing:} DeepCardio-RAG is a distributed multi-modal AI pipeline built around a Milvus-backed vector retrieval cluster, a FastAPI backend deployed on Google Colab, and a LangGraph multi-agent orchestration layer. Six deep-learning encoders operate under a unified Retrieval-Augmented Generation (RAG) framework, demonstrating scalable, cloud-deployable diagnostic inference — directly aligned with the journal's focus on cluster and distributed computing systems.
+
+\textbf{Key contributions:} (i)~A six-modality pipeline (ECG, echocardiography, heart sound, ventricular arrhythmia, heart disease, arthritis) under a single RAG inference cluster; (ii)~a Milvus vector store (256-dim cosine similarity, FAISS fallback) for sub-second guideline retrieval; (iii)~the CardioFusion Cross-Modal Transformer + MMoE scorer (15.8M parameters) producing a 100-point unified cardiac risk index; and (iv)~a fully working prototype with React dashboard, FastAPI backend, and dual-format PDF generation.
+
+\textbf{Declaration:} This manuscript is original, has not been published previously, and is not under consideration elsewhere. All authors have approved the submission. No conflicts of interest or funding are declared. All datasets are publicly available benchmarks.
+
+We believe this work will be of significant interest to readers of \textit{Cluster Computing} and look forward to the possibility of contributing to the journal.
+
+\closing{Yours sincerely,}
+
+\vspace{-0.3cm}
+\textbf{N. Rama Rao} (Corresponding Author)\\
+Department of Artificial Intelligence, SR University, Warangal, Telangana, India\\
+Koneru Lakshmaiah Education Foundation, Hyderabad, Telangana, India\\
+Email: ramarao.n@klh.edu.in \quad Tel.: +91-9951987846
+
+\smallskip
+\textbf{Co-authors:}\\
+Durgesh Nandan --- \href{mailto:durgesh.nandan@sru.edu.in}{durgesh.nandan@sru.edu.in}\\
+S. Satyanarayana --- \href{mailto:ssatyanarayanaset@sanjivani.edu.in}{ssatyanarayanaset@sanjivani.edu.in}
+
+\end{letter}
+\end{document}

@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeepCardio-RAG & Arthritis Clinical Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="logo-area">
+                <i class="fa-solid fa-heart-pulse logo-icon"></i>
+                <h2>DeepCardio<span class="highlight">RAG</span></h2>
+            </div>
+            <nav class="nav-menu">
+                <a href="#" class="nav-item active" data-page="ecg-page"><i class="fa-solid fa-chart-line"></i> ECG
+                    Dashboard</a>
+                <a href="#" class="nav-item" data-page="arthritis-page"><i class="fa-solid fa-bone"></i> Arthritis
+                    Analysis</a>
+                <a href="#" class="nav-item" data-page="predict-page"><i class="fa-solid fa-stethoscope"></i> Patient
+                    Predictor</a>
+                <a href="#" class="nav-item" data-page="records-page"><i class="fa-solid fa-users"></i> Patient
+                    Records</a>
+                <a href="#" class="nav-item" data-page="dbstats-page"><i class="fa-solid fa-database"></i> Vector DB
+                    Stats</a>
+                <a href="#" class="nav-item" data-page="echonet-page"><i class="fa-solid fa-video"></i> EchoNet
+                    Video</a>
+                <a href="#" class="nav-item" data-page="ecgimg-page"><i class="fa-solid fa-image"></i> ECG Images</a>
+                <a href="#" class="nav-item" data-page="heartsound-page"><i class="fa-solid fa-ear-listen"></i> Heart
+                    Sound</a>
+                <a href="#" class="nav-item" data-page="vfdb-page"><i class="fa-solid fa-bolt"></i> VFDB
+                    Arrhythmia</a>
+                <a href="#" class="nav-item" data-page="fusion-page"><i class="fa-solid fa-atom"></i> CardioFusion</a>
+                <a href="#" class="nav-item" data-page="heartdisease-page"><i class="fa-solid fa-heart-pulse" style="color:#ef4444"></i> Heart Disease</a>
+                <a href="#" class="nav-item" data-page="arrhythmia-page"><i class="fa-solid fa-wave-square" style="color:#06b6d4"></i> Arrhythmia (MIT-BIH)</a>
+                <a href="#" class="nav-item" data-page="validation-page"><i class="fa-solid fa-certificate"></i> Validation</a>
+                <a href="#" class="nav-item" data-page="settings-page"><i class="fa-solid fa-gear"></i> Settings</a>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="doctor-profile">
+                    <div class="avatar">NS</div>
+                    <div class="info"><strong>N Soumya</strong><span>Student MBBS</span></div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-header">
+                <div class="search-bar"><i class="fa-solid fa-magnifying-glass"></i><input type="text"
+                        placeholder="Search patient ID, condition..."></div>
+                <div class="header-actions">
+                    <button class="icon-btn"><i class="fa-regular fa-bell"></i></button>
+                    <input type="file" id="ecg-file-input" accept=".csv,.json" style="display:none">
+                    <button class="primary-btn" id="upload-ecg-btn"><i class="fa-solid fa-file-medical"></i> Upload ECG</button>
+                    <a id="sample-ecg-link" href="/api/analyze/sample-ecg" download="sample_ecg_12lead.csv" style="display:none"></a>
+                </div>
+            </header>
+
+            <!-- ===== PAGE 1: ECG ===== -->
+            <div id="ecg-page" class="page-content active-page">
+                <div class="dashboard-grid">
+                    <div class="col-main">
+                        <div class="card ecg-display-card">
+                            <div class="card-header">
+                                <h3><i class="fa-solid fa-wave-square"></i> Real-time 12-Lead ECG</h3>
+                                <div class="status-badge pulse-anim"><i class="fa-solid fa-circle"></i> Monitoring</div>
+                            </div>
+                            <div class="chart-container"><canvas id="ecgChart"></canvas></div>
+                            <div class="action-bar">
+                                <div class="ecg-stats">
+                                    <span class="stat-pill"><strong>HR:</strong> 72 bpm</span>
+                                    <span class="stat-pill"><strong>PR:</strong> 160 ms</span>
+                                    <span class="stat-pill"><strong>QRS:</strong> 90 ms</span>
+                                    <span class="stat-pill"><strong>QTc:</strong> 410 ms</span>
+                                </div>
+                                <button id="runAnalysisBtn" class="analyze-btn"><i
+                                        class="fa-solid fa-wand-magic-sparkles"></i> Run DeepCardio-RAG</button>
+                            </div>
+                        </div>
+                        <div class="card rag-context-card">
+                            <div class="card-header">
+                                <h3><i class="fa-solid fa-book-open-reader"></i> Retrieved Clinical Knowledge (RAG)</h3>
+                                <span class="db-badge"><i class="fa-solid fa-server"></i> Milvus 50k DB</span>
+                            </div>
+                            <div class="rag-content" id="ragContextBox">
+                                <div class="empty-state"><i class="fa-solid fa-database"></i>
+                                    <p>Run analysis to retrieve guidelines.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="fa-solid fa-database"></i> Source Dataset — PTB-XL (PhysioNet)</h3>
+                                <button id="loadPtbxlEdaBtn" class="analyze-btn"><i class="fa-solid fa-chart-bar"></i> Load Stats</button>
+                            </div>
+                            <p style="padding:0.5rem 1.5rem 0;color:var(--text-light);font-size:0.85rem">
+                                "Run DeepCardio-RAG" above samples a <strong>real clinical 12-lead ECG</strong> from PTB-XL — not synthetic noise — and shows the ground-truth diagnosis alongside the AI-generated report.
+                            </p>
+                            <div class="stats-row" id="ptbxlStatsRow">
+                                <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-heart-pulse"></i></div><div class="stat-info"><span class="stat-number" id="ptbxlTotal">—</span><span class="stat-label">Real ECG Records</span></div></div>
+                                <div class="stat-card"><div class="stat-icon" style="background:rgba(25,128,56,0.15);color:#198038"><i class="fa-solid fa-circle-check"></i></div><div class="stat-info"><span class="stat-number" id="ptbxlNorm">—</span><span class="stat-label">NORM</span></div></div>
+                                <div class="stat-card"><div class="stat-icon" style="background:rgba(250,77,86,0.15);color:#fa4d56"><i class="fa-solid fa-heart-crack"></i></div><div class="stat-info"><span class="stat-number" id="ptbxlMi">—</span><span class="stat-label">MI</span></div></div>
+                                <div class="stat-card"><div class="stat-icon" style="background:rgba(15,98,254,0.15);color:#0f62fe"><i class="fa-solid fa-wave-square"></i></div><div class="stat-info"><span class="stat-number" id="ptbxlSttc">—</span><span class="stat-label">STTC</span></div></div>
+                                <div class="stat-card"><div class="stat-icon" style="background:rgba(255,131,43,0.15);color:#ff832b"><i class="fa-solid fa-bolt"></i></div><div class="stat-info"><span class="stat-number" id="ptbxlCdHyp">—</span><span class="stat-label">CD + HYP</span></div></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-side">
+                        <div class="card ai-report-card">
+                            <div class="card-header">
+                                <h3><i class="fa-solid fa-robot"></i> Diagnostic Report</h3>
+                                <div class="engine-badge">Transformer-Generated</div>
+                            </div>
+                            <div id="loadingOverlay" class="loading-overlay hidden">
+                                <div class="spinner"></div>
+                                <p>DeepCardio-RAG reasoning...</p>
+                            </div>
+                            <div id="ecgSourceBanner"></div>
+                            <div class="report-content" id="reportContentBox">
+                                <div class="empty-state"><i class="fa-solid fa-file-contract"></i>
+                                    <p>Report appears after analysis.</p>
+                                </div>
+                            </div>
+                            <div class="report-metrics hidden" id="reportMetrics">
+                                <div class="metric"><span class="label">Inference Time:</span><span
+                                        class="value success" id="valInferenceTime">-</span></div>
+                                <div class="metric"><span class="label">BLEU-4:</span><span class="value"
+                                        id="valBleu">-</span></div>
+                                <!-- Withdrawn 2026-08-05: these two tiles were hardcoded literals with no id,
+                                     so app.js could never update them. No metric in the pipeline computes either
+                                     value. Do NOT restore a number here unless /api/analyze actually returns it. -->
+                                <div class="metric"><span class="label">Feature Accuracy:</span><span
+                                        class="value muted" id="valFeatureAcc"
+                                        title="Not measured. The 94.7% shown here previously was a static placeholder copied from PROJECT_ARCHITECTURE.md, not a computed result.">not measured</span></div>
+                                <div class="metric"><span class="label">Halluc. Delta:</span><span
+                                        class="value muted" id="valHallucDelta"
+                                        title="Not evaluated. The -78% vs GPT-4 shown here previously was a static placeholder; no GPT-4 comparison was ever run.">not measured</span></div>
+                            </div>
+                            <div class="report-actions hidden" id="reportActions" style="gap: 8px; flex-wrap: wrap;">
+                                <button class="outline-btn" id="ecgDocPdfBtn" title="Clinical Report (Doctor)"><i class="fa-solid fa-user-doctor"></i> Clinical PDF</button>
+                                <button class="outline-btn" id="ecgPatPdfBtn" title="Patient-friendly Report"><i class="fa-solid fa-user"></i> Patient PDF</button>
+                                <button class="primary-btn"><i class="fa-solid fa-check"></i> Sign & Save</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== PAGE 2: Arthritis EDA ===== -->
+            <div id="arthritis-page" class="page-content">
+                <div class="page-container">
+                    <div class="page-title-bar">
+                        <h2><i class="fa-solid fa-bone"></i> Arthritis Profile Dataset — Exploratory Analysis</h2>
+                        <button id="loadEdaBtn" class="analyze-btn"><i class="fa-solid fa-chart-pie"></i> Load
+                            EDA</button>
+                    </div>
+                    <div id="arthritisDatasetInfo"></div>
+                    <div class="stats-row" id="edaStatsRow">
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fa-solid fa-users"></i></div>
+                            <div class="stat-info"><span class="stat-number" id="totalSamples">—</span><span
+                                    class="stat-label">Total Patients</span></div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fa-solid fa-list"></i></div>
+                            <div class="stat-info"><span class="stat-number" id="totalFeatures">—</span><span
+                                    class="stat-label">Features</span></div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon male"><i class="fa-solid fa-mars"></i></div>
+                            <div class="stat-info"><span class="stat-number" id="maleCount">—</span><span
+                                    class="stat-label">Male</span></div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon female"><i class="fa-solid fa-venus"></i></div>
+                            <div class="stat-info"><span class="stat-number" id="femaleCount">—</span><span
+                                    class="stat-label">Female</span></div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon age"><i class="fa-solid fa-calendar"></i></div>
+                            <div class="stat-info"><span class="stat-number" id="avgAge">—</span><span
+                                    class="stat-label">Avg Age</span></div>
+                        </div>
+                    </div>
+                    <div class="eda-grid">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="fa-solid fa-fire"></i> Inflammatory Markers</h3>
+                            </div><canvas id="inflammatoryChart"></canvas>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="fa-solid fa-droplet"></i> Hematology Markers</h3>
+                            </div><canvas id="hematologyChart"></canvas>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="fa-solid fa-flask"></i> Biochemistry Markers</h3>
+                            </div><canvas id="biochemChart"></canvas>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="fa-solid fa-triangle-exclamation"></i> Missing Data (%)</h3>
+                            </div><canvas id="missingChart"></canvas>
+                        </div>
+                    </div>
+                    <!-- Sample APD Patients -->
+                    <div class="card" style="margin-bottom:1rem">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-users"></i> Sample Dataset Records</h3>
+                            <span class="model-badge" id="arthritis-sample-badge">Loading dataset…</span>
+                        </div>
+                        <div id="arthritis-sample-data">
+                            <div class="empty-state" style="padding:1.5rem"><div class="spinner"></div><p>Loading sample records...</p></div>
+                        </div>
+                    </div>
+
+                    <div class="card train-card">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-brain"></i> Train Arthritis Risk Model (Tabular BERT + MoE)</h3>
+                            <button id="trainModelBtn" class="analyze-btn"><i class="fa-solid fa-play"></i> Train
+                                Model</button>
+                        </div>
+                        <div id="trainResults" class="train-results">
+                            <div class="empty-state"><i class="fa-solid fa-graduation-cap"></i>
+                                <p>Click "Train Model" to train the Hybrid Stacking Ensemble (Tabular BERT-MoE + GBM + RF + ExtraTrees + SVC → Logistic Regression Meta-Learner) on <span id="arthritisTrainDataset">the loaded arthritis dataset</span>.</p>
+                                <p class="train-warning"><strong>Runs locally on CPU.</strong> Training blocks the server — every other screen will stop responding until it finishes. Reportable results are produced on Colab GPU, not here.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== PAGE 3: Patient Predictor ===== -->
+            <div id="predict-page" class="page-content">
+                <div class="page-container">
+                    <div class="page-title-bar">
+                        <h2><i class="fa-solid fa-stethoscope"></i> Arthritis Risk Prediction</h2>
+                    </div>
+                    <div class="predict-grid">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="fa-solid fa-clipboard-list"></i> Patient Risk Factors</h3>
+                            </div>
+                            <form id="predictForm" class="predict-form">
+                                <!-- NHANES risk factors — these are the inputs the trained model
+                                     actually consumes. The previous 22 APD blood-panel fields (TC,
+                                     ESRh, Hb, ASO, Uric_Acid, …) were dropped before the model saw
+                                     them, so typing them changed nothing. Do not reinstate them
+                                     without retraining on a dataset that contains them. -->
+                                <div class="form-grid">
+                                    <!-- Age -->
+                                    <div class="form-group">
+                                        <label>Age <span class="field-unit">(years)</span></label>
+                                        <input type="number" name="Age" placeholder="e.g. 55" step="1" min="0" max="120">
+                                        <span class="field-hint">Arthritis prevalence rises sharply after 55</span>
+                                    </div>
+                                    <!-- Sex -->
+                                    <div class="form-group">
+                                        <label>Sex</label>
+                                        <select name="Gender_M">
+                                            <option value="0">Female</option>
+                                            <option value="1">Male</option>
+                                        </select>
+                                        <span class="field-hint">Biological sex of the patient</span>
+                                    </div>
+                                    <!-- BMI -->
+                                    <div class="form-group">
+                                        <label>BMI — Body Mass Index <span class="field-unit">(kg/m²)</span></label>
+                                        <input type="number" name="BMI" placeholder="e.g. 27.5" step="0.1" min="10" max="70">
+                                        <span class="field-hint"><span class="normal">Normal: 18.5–24.9</span> · <span class="elevated">&gt;30 obese — joint loading risk</span></span>
+                                    </div>
+                                    <!-- Systolic BP -->
+                                    <div class="form-group">
+                                        <label>Systolic BP <span class="field-unit">(mmHg)</span></label>
+                                        <input type="number" name="SystolicBP" placeholder="e.g. 128" step="1" min="60" max="250">
+                                        <span class="field-hint"><span class="normal">Normal: &lt;120</span> · <span class="elevated">≥130 hypertensive</span></span>
+                                    </div>
+                                    <!-- Diastolic BP -->
+                                    <div class="form-group">
+                                        <label>Diastolic BP <span class="field-unit">(mmHg)</span></label>
+                                        <input type="number" name="DiastolicBP" placeholder="e.g. 78" step="1" min="40" max="150">
+                                        <span class="field-hint"><span class="normal">Normal: &lt;80</span> · <span class="elevated">≥80 hypertensive</span></span>
+                                    </div>
+                                    <!-- Gout -->
+                                    <div class="form-group">
+                                        <label>Doctor-diagnosed Gout</label>
+                                        <select name="HasGout">
+                                            <option value="0">No</option>
+                                            <option value="1">Yes</option>
+                                        </select>
+                                        <span class="field-hint">Inflammatory arthropathy — strong predictor</span>
+                                    </div>
+                                    <!-- Osteoporosis -->
+                                    <div class="form-group">
+                                        <label>Doctor-diagnosed Osteoporosis</label>
+                                        <select name="HasOsteoporosis">
+                                            <option value="0">No</option>
+                                            <option value="1">Yes</option>
+                                        </select>
+                                        <span class="field-hint">Frequently co-occurs with arthritis</span>
+                                    </div>
+                                    <!-- Poverty ratio -->
+                                    <div class="form-group">
+                                        <label>Income-to-Poverty Ratio <span class="field-unit">(0–5)</span></label>
+                                        <input type="number" name="PovertyRatio" placeholder="e.g. 2.5" step="0.01" min="0" max="5">
+                                        <span class="field-hint">NHANES INDFMPIR · <span class="elevated">lower = greater deprivation</span></span>
+                                    </div>
+                                    <!-- Education -->
+                                    <div class="form-group">
+                                        <label>Education Level</label>
+                                        <select name="EducationLevel">
+                                            <option value="1">Less than 9th grade</option>
+                                            <option value="2">9th–11th grade</option>
+                                            <option value="3" selected>High school graduate / GED</option>
+                                            <option value="4">Some college / associate degree</option>
+                                            <option value="5">College graduate or above</option>
+                                        </select>
+                                        <span class="field-hint">NHANES DMDEDUC2</span>
+                                    </div>
+                                </div>
+                                <button type="submit" class="analyze-btn"><i
+                                        class="fa-solid fa-magnifying-glass-chart"></i> Predict Arthritis Risk</button>
+                            </form>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="fa-solid fa-clipboard-check"></i> Prediction Result</h3>
+                            </div>
+                            <div id="predictResult" class="predict-result">
+                                <div class="empty-state"><i class="fa-solid fa-hand-holding-medical"></i>
+                                    <p>Fill values and click predict.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== PAGE 4: Patient Records ===== -->
+            <div id="records-page" class="page-content">
+                <div class="page-container">
+                    <div class="page-title-bar">
+                        <h2><i class="fa-solid fa-users"></i> Patient Records</h2>
+                        <button id="loadRecordsBtn" class="analyze-btn"><i class="fa-solid fa-download"></i> Load
+                            Records</button>
+                    </div>
+                    <div class="card">
+                        <div id="recordsTable" class="records-table-container">
+                            <div class="empty-state"><i class="fa-solid fa-folder-open"></i>
+                                <p>Click "Load Records" to view patient data from the Arthritis Profile Dataset.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== PAGE 5: Vector DB Stats ===== -->
+            <div id="dbstats-page" class="page-content">
+                <div class="page-container">
+                    <div class="page-title-bar">
+                        <h2><i class="fa-solid fa-database"></i> System & Database Statistics</h2>
+                        <button id="loadDbStatsBtn" class="analyze-btn"><i class="fa-solid fa-sync"></i> Refresh
+                            Stats</button>
+                    </div>
+                    <div id="dbStatsContent" class="db-stats-grid">
+                        <div class="empty-state"><i class="fa-solid fa-server"></i>
+                            <p>Click "Refresh Stats" to load system information.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== PAGE 6: EchoNet-Dynamic Video Analysis ===== -->
+            <div id="echonet-page" class="page-content">
+                <div class="page-container">
+                    <div class="page-title-bar">
+                        <h2><i class="fa-solid fa-video"></i> EchoNet-Dynamic — Echocardiogram Video Analysis</h2>
+                        <div style="display:flex;gap:8px">
+                            <button id="loadEchoEdaBtn" class="analyze-btn"><i class="fa-solid fa-chart-bar"></i> Load Stats</button>
+                        </div>
+                    </div>
+
+                    <!-- EchoNet Stats Row -->
+                    <div class="stats-row" id="echoStatsRow">
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fa-solid fa-film"></i></div>
+                            <div class="stat-info"><span class="stat-number" id="echoTotalVideos">—</span><span class="stat-label">Total Videos</span></div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fa-solid fa-heart-pulse"></i></div>
+                            <div class="stat-info"><span class="stat-number" id="echoMeanEF">—</span><span class="stat-label">Mean EF%</span></div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background:rgba(250,77,86,0.15);color:#fa4d56"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                            <div class="stat-info"><span class="stat-number" id="echoHFrEF">—</span><span class="stat-label">HFrEF (EF&lt;40)</span></div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background:rgba(255,131,43,0.15);color:#ff832b"><i class="fa-solid fa-exclamation"></i></div>
+                            <div class="stat-info"><span class="stat-number" id="echoHFmrEF">—</span><span class="stat-label">HFmrEF (40-50)</span></div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background:rgba(25,128,56,0.15);color:#198038"><i class="fa-solid fa-check"></i></div>
+                            <div class="stat-info"><span class="stat-number" id="echoNormal">—</span><span class="stat-label">Normal (EF≥50)</span></div>
+                        </div>
+                    </div>
+
+                    <!-- Live Echo Video + Dataset Info Row -->
+                    <div style="display:grid;grid-template-columns:220px 1fr;gap:1rem;margin-bottom:1rem">
+                        <div class="card">
+                            <div class="card-header" style="padding:0.75rem 1rem">
+                                <h3 style="font-size:0.9rem"><i class="fa-solid fa-heart-pulse" style="color:#fa4d56"></i> Live Echo View</h3>
+                                <span class="model-badge" style="font-size:0.7rem">Synthetic</span>
+                            </div>
+                            <div style="padding:0.75rem;text-align:center">
+                                <canvas id="echoAnimCanvas" width="190" height="190" style="background:#000;border-radius:8px;border:1px solid #333;display:block;margin:0 auto"></canvas>
+                                <p style="font-size:0.7rem;color:var(--text-light);margin:0.4rem 0 0">Pulsing LV · mitral valve · synthetic cardiac cycle</p>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header" style="padding:0.75rem 1rem">
+                                <h3 style="font-size:0.9rem"><i class="fa-solid fa-circle-info"></i> About EchoNet-Dynamic</h3>
+                            </div>
+                            <div style="padding:1rem;font-size:0.84rem;color:var(--text-light);line-height:1.6">
+                                <p style="margin:0 0 0.6rem"><strong style="color:var(--text)">10,030 apical 4-chamber echo videos</strong> from Stanford AIMI, annotated with ejection fraction (EF), end-systolic (ESV) and end-diastolic (EDV) volumes.</p>
+                                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.6rem;font-size:0.8rem">
+                                    <div style="padding:0.4rem 0.6rem;background:rgba(250,77,86,0.1);border-radius:6px"><strong>HFrEF</strong> EF &lt; 40%</div>
+                                    <div style="padding:0.4rem 0.6rem;background:rgba(255,131,43,0.1);border-radius:6px"><strong>HFmrEF</strong> EF 40–50%</div>
+                                    <div style="padding:0.4rem 0.6rem;background:rgba(25,128,56,0.1);border-radius:6px"><strong>Normal</strong> EF ≥ 50%</div>
+                                    <div style="padding:0.4rem 0.6rem;background:rgba(15,98,254,0.1);border-radius:6px"><strong>Model</strong> 3D-CNN + RAG</div>
+                                </div>
+                                <p style="margin:0;padding:0.4rem 0.6rem;background:rgba(139,92,246,0.1);border-radius:6px;font-size:0.78rem"><i class="fa-solid fa-info-circle"></i> Demo mode uses a synthetic echo tensor — no dataset download required. Upload a real .avi for actual inference.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="eda-grid" style="grid-template-columns: 1fr 1fr;">
+                        <!-- Upload / Demo Analysis Card -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="fa-solid fa-cloud-arrow-up"></i> Analyze Echocardiogram</h3>
+                            </div>
+                            <div style="padding:1.5rem">
+                                <div class="echo-upload-area" id="echoUploadArea" style="border:2px dashed var(--border);border-radius:12px;padding:2rem;text-align:center;margin-bottom:1rem;cursor:pointer;transition:border-color 0.2s">
+                                    <i class="fa-solid fa-video" style="font-size:2.5rem;color:var(--primary);margin-bottom:0.5rem;display:block"></i>
+                                    <p style="margin:0;color:var(--text-light)">Drop an .avi echocardiogram video here, or click to browse</p>
+                                    <input type="file" id="echoFileInput" accept=".avi,.mp4,.mov" style="display:none">
+                                </div>
+                                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                                    <button id="echoUploadBtn" class="analyze-btn" disabled><i class="fa-solid fa-upload"></i> Analyze Upload</button>
+                                    <button id="echoDemoBtn" class="analyze-btn" style="background:var(--accent)"><i class="fa-solid fa-wand-magic-sparkles"></i> Run Demo Analysis</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- EF Distribution Chart -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="fa-solid fa-chart-pie"></i> Ejection Fraction Distribution</h3>
+                            </div>
+                            <div style="padding:1rem;height:280px"><canvas id="efDistChart"></canvas></div>
+                        </div>
+                    </div>
+
+                    <!-- Sample Dataset Rows -->
+                    <div class="card" style="margin-top:1rem">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-table"></i> Sample Dataset Records</h3>
+                            <span class="model-badge">EchoNet-Dynamic — FileList.csv preview</span>
+                        </div>
+                        <div id="echoSampleData">
+                            <div class="empty-state" style="padding:1.5rem">
+                                <i class="fa-solid fa-film"></i>
+                                <p style="margin:0.5rem 0 0;font-size:0.85rem">Sample records load automatically when the dataset is available.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Analysis Result Card -->
+                    <div class="card" style="margin-top:1rem">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-robot"></i> Echo Diagnostic Report</h3>
+                            <div class="engine-badge">3D-CNN + RAG + GPT-2</div>
+                        </div>
+                        <div id="echoLoadingOverlay" class="loading-overlay hidden">
+                            <div class="spinner"></div>
+                            <p>EchoNet-RAG pipeline running...</p>
+                        </div>
+                        <div class="dashboard-grid" style="padding:1rem">
+                            <div class="col-main">
+                                <h4 style="margin:0 0 0.5rem"><i class="fa-solid fa-file-medical"></i> Generated Report</h4>
+                                <div class="report-content" id="echoReportBox" style="min-height:200px">
+                                    <div class="empty-state"><i class="fa-solid fa-heart-pulse"></i>
+                                        <p>Run demo or upload an echo video to generate a report.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-side">
+                                <h4 style="margin:0 0 0.5rem"><i class="fa-solid fa-book-open-reader"></i> Retrieved Guidelines</h4>
+                                <div class="rag-content" id="echoRagBox" style="min-height:200px">
+                                    <div class="empty-state"><i class="fa-solid fa-database"></i>
+                                        <p>Guidelines appear after analysis.</p>
+                                    </div>
+                                </div>
+                                <div class="report-metrics hidden" id="echoMetrics" style="margin-top:1rem">
+                                    <div class="metric"><span class="label">Inference Time:</span><span class="value success" id="echoInferenceTime">-</span></div>
+                                    <div class="metric"><span class="label">Predicted EF:</span><span class="value" id="echoEFValue">-</span></div>
+                                    <div class="metric"><span class="label">Classification:</span><span class="value" id="echoEFCategory">-</span></div>
+                                    <div class="metric"><span class="label">Mode:</span><span class="value" id="echoMode">-</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dataset Browser -->
+                    <div class="card" style="margin-top:1rem">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-table"></i> Dataset Browser</h3>
+                            <button id="loadEchoBrowseBtn" class="analyze-btn"><i class="fa-solid fa-folder-open"></i> Browse Videos</button>
+                        </div>
+                        <div id="echoBrowseContent">
+                            <div class="empty-state"><i class="fa-solid fa-film"></i>
+                                <p>Click "Browse Videos" to explore the EchoNet-Dynamic dataset (requires dataset download).</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== PAGE 7: ECG Image Classification ===== -->
+            <div id="ecgimg-page" class="page-content">
+                <div class="page-container">
+                    <div class="page-title-bar">
+                        <h2><i class="fa-solid fa-image"></i> ECG Image Classification (MIT-BIH / AAMI)</h2>
+                        <button id="loadEcgImgEdaBtn" class="analyze-btn"><i class="fa-solid fa-chart-bar"></i> Load Stats</button>
+                    </div>
+                    <div class="stats-row" id="ecgImgStatsRow">
+                        <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-images"></i></div><div class="stat-info"><span class="stat-number" id="ecgImgTotal">—</span><span class="stat-label">Total Images</span></div></div>
+                        <div class="stat-card"><div class="stat-icon" style="background:rgba(25,128,56,0.15);color:#198038"><i class="fa-solid fa-heart"></i></div><div class="stat-info"><span class="stat-number" id="ecgImgN">—</span><span class="stat-label">Normal (N)</span></div></div>
+                        <div class="stat-card"><div class="stat-icon" style="background:rgba(15,98,254,0.15);color:#0f62fe"><i class="fa-solid fa-bolt"></i></div><div class="stat-info"><span class="stat-number" id="ecgImgS">—</span><span class="stat-label">Supraventricular (S)</span></div></div>
+                        <div class="stat-card"><div class="stat-icon" style="background:rgba(250,77,86,0.15);color:#fa4d56"><i class="fa-solid fa-triangle-exclamation"></i></div><div class="stat-info"><span class="stat-number" id="ecgImgV">—</span><span class="stat-label">Ventricular (V)</span></div></div>
+                        <div class="stat-card"><div class="stat-icon" style="background:rgba(255,131,43,0.15);color:#ff832b"><i class="fa-solid fa-wave-square"></i></div><div class="stat-info"><span class="stat-number" id="ecgImgFQ">—</span><span class="stat-label">Fusion+Unclass (F/Q)</span></div></div>
+                    </div>
+                    <div class="eda-grid" style="grid-template-columns: 1fr 1fr;">
+                        <div class="card">
+                            <div class="card-header"><h3><i class="fa-solid fa-cloud-arrow-up"></i> Classify ECG Image</h3></div>
+                            <div style="padding:1.5rem">
+                                <div class="echo-upload-area" id="ecgImgUploadArea" style="border:2px dashed var(--border);border-radius:12px;padding:2rem;text-align:center;margin-bottom:1rem;cursor:pointer">
+                                    <i class="fa-solid fa-image" style="font-size:2.5rem;color:var(--primary);margin-bottom:0.5rem;display:block"></i>
+                                    <p style="margin:0;color:var(--text-light)">Drop a 256x256 ECG waveform image (.png/.jpg)</p>
+                                    <input type="file" id="ecgImgFileInput" accept=".png,.jpg,.jpeg" style="display:none">
+                                </div>
+                                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                                    <button id="ecgImgUploadBtn" class="analyze-btn" disabled><i class="fa-solid fa-upload"></i> Classify Upload</button>
+                                    <button id="ecgImgDemoBtn" class="analyze-btn" style="background:var(--accent)"><i class="fa-solid fa-wand-magic-sparkles"></i> Demo Classify</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header"><h3><i class="fa-solid fa-chart-pie"></i> AAMI Class Distribution</h3></div>
+                            <div style="padding:1rem;height:280px"><canvas id="ecgImgDistChart"></canvas></div>
+                        </div>
+                    </div>
+                    <div class="card" style="margin-top:1rem">
+                        <div class="card-header"><h3><i class="fa-solid fa-clipboard-check"></i> Classification Result</h3><div class="engine-badge">2D-CNN Classifier</div></div>
+                        <div id="ecgImgResult" class="predict-result" style="padding:1.5rem">
+                            <div class="empty-state"><i class="fa-solid fa-image"></i><p>Upload or demo-classify an ECG image.</p></div>
+                        </div>
+                    </div>
+                    <div class="card" style="margin-top:1rem">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-diagram-project"></i> Input → Processing → Output Pipeline</h3>
+                            <button id="ecgImgPipelineBtn" class="analyze-btn" style="background:linear-gradient(135deg,#0f62fe,#8a3ffc)"><i class="fa-solid fa-play"></i> Run Pipeline</button>
+                        </div>
+                        <div id="ecgImgPipelineResult" style="padding:1.5rem">
+                            <div class="empty-state"><i class="fa-solid fa-diagram-project"></i><p>Click "Run Pipeline" to visualize the full classification pipeline with stage-by-stage images.</p></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== PAGE 8: Heart Sound Analysis ===== -->
+            <div id="heartsound-page" class="page-content">
+                <div class="page-container">
+                    <div class="page-title-bar">
+                        <h2><i class="fa-solid fa-ear-listen"></i> CirCor Heart Sound — Murmur Detection</h2>
+                        <button id="loadHSEdaBtn" class="analyze-btn"><i class="fa-solid fa-chart-bar"></i> Load Stats</button>
+                    </div>
+                    <div class="stats-row" id="hsStatsRow">
+                        <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-users"></i></div><div class="stat-info"><span class="stat-number" id="hsSubjects">—</span><span class="stat-label">Subjects</span></div></div>
+                        <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-microphone"></i></div><div class="stat-info"><span class="stat-number" id="hsRecordings">—</span><span class="stat-label">Recordings</span></div></div>
+                        <div class="stat-card"><div class="stat-icon" style="background:rgba(25,128,56,0.15);color:#198038"><i class="fa-solid fa-check"></i></div><div class="stat-info"><span class="stat-number" id="hsAbsent">—</span><span class="stat-label">Murmur Absent</span></div></div>
+                        <div class="stat-card"><div class="stat-icon" style="background:rgba(250,77,86,0.15);color:#fa4d56"><i class="fa-solid fa-heart-pulse"></i></div><div class="stat-info"><span class="stat-number" id="hsPresent">—</span><span class="stat-label">Murmur Present</span></div></div>
+                        <div class="stat-card"><div class="stat-icon" style="background:rgba(255,131,43,0.15);color:#ff832b"><i class="fa-solid fa-question"></i></div><div class="stat-info"><span class="stat-number" id="hsUnknown">—</span><span class="stat-label">Unknown</span></div></div>
+                    </div>
+                    <div class="eda-grid" style="grid-template-columns: 1fr 1fr;">
+                        <div class="card">
+                            <div class="card-header"><h3><i class="fa-solid fa-cloud-arrow-up"></i> Analyze Heart Sound</h3></div>
+                            <div style="padding:1.5rem">
+                                <div class="echo-upload-area" id="hsUploadArea" style="border:2px dashed var(--border);border-radius:12px;padding:2rem;text-align:center;margin-bottom:1rem;cursor:pointer">
+                                    <i class="fa-solid fa-ear-listen" style="font-size:2.5rem;color:var(--primary);margin-bottom:0.5rem;display:block"></i>
+                                    <p style="margin:0;color:var(--text-light)">Drop a heart sound .wav file (4000 Hz)</p>
+                                    <input type="file" id="hsFileInput" accept=".wav" style="display:none">
+                                </div>
+                                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                                    <button id="hsUploadBtn" class="analyze-btn" disabled><i class="fa-solid fa-upload"></i> Analyze Upload</button>
+                                    <button id="hsDemoBtn" class="analyze-btn" style="background:var(--accent)"><i class="fa-solid fa-wand-magic-sparkles"></i> Demo Analysis</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header"><h3><i class="fa-solid fa-chart-pie"></i> Murmur Distribution</h3></div>
+                            <div style="padding:1rem;height:280px"><canvas id="hsDistChart"></canvas></div>
+                        </div>
+                    </div>
+                    <div class="card" style="margin-top:1rem">
+                        <div class="card-header"><h3><i class="fa-solid fa-stethoscope"></i> Murmur Detection Result</h3><div class="engine-badge">1D-CNN Mel-Spectrogram</div></div>
+                        <div id="hsResultBox" style="padding:1.5rem">
+                            <div class="empty-state"><i class="fa-solid fa-ear-listen"></i><p>Upload or demo-analyze a heart sound recording.</p></div>
+                        </div>
+                    </div>
+                    <div class="card" style="margin-top:1rem;border:2px solid #fa4d5640;background:linear-gradient(135deg,#fa4d5608,#8a3ffc08)">
+                        <div class="card-header" style="border-bottom:1px solid #fa4d5630">
+                            <h3><i class="fa-solid fa-bolt" style="color:#fa4d56"></i> Combined Detection: Murmur + Malignant Ventricular Arrhythmia</h3>
+                            <button id="hsCombinedBtn" class="analyze-btn" style="background:linear-gradient(135deg,#fa4d56,#8a3ffc)"><i class="fa-solid fa-wand-magic-sparkles"></i> Run Combined Analysis</button>
+                        </div>
+                        <div id="hsCombinedResult" style="padding:1.5rem">
+                            <div class="empty-state"><i class="fa-solid fa-shield-halved"></i><p>Click "Run Combined Analysis" to get both Murmur Detection and Malignant Ventricular Arrhythmia results side-by-side from the CirCor (PhysioNet) and MIT-BIH VFDB datasets.</p></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== PAGE 9: VFDB Ventricular Arrhythmia ===== -->
+            <div id="vfdb-page" class="page-content">
+                <div class="page-container">
+                    <div class="page-title-bar">
+                        <h2><i class="fa-solid fa-bolt"></i> VFDB — Malignant Ventricular Arrhythmia Detection</h2>
+                        <button id="loadVfdbEdaBtn" class="analyze-btn"><i class="fa-solid fa-chart-bar"></i> Load Stats</button>
+                    </div>
+                    <div class="stats-row" id="vfdbStatsRow">
+                        <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-file-waveform"></i></div><div class="stat-info"><span class="stat-number" id="vfdbRecords">—</span><span class="stat-label">ECG Records</span></div></div>
+                        <div class="stat-card"><div class="stat-icon" style="background:rgba(250,77,86,0.15);color:#fa4d56"><i class="fa-solid fa-skull-crossbones"></i></div><div class="stat-info"><span class="stat-number" id="vfdbDangerous">—</span><span class="stat-label">Dangerous Events</span></div></div>
+                        <div class="stat-card"><div class="stat-icon" style="background:rgba(138,63,252,0.15);color:#8a3ffc"><i class="fa-solid fa-clock"></i></div><div class="stat-info"><span class="stat-number" id="vfdbDuration">30 min</span><span class="stat-label">Per Recording</span></div></div>
+                    </div>
+                    <div class="eda-grid" style="grid-template-columns: 1fr 1fr;">
+                        <div class="card">
+                            <div class="card-header"><h3><i class="fa-solid fa-wand-magic-sparkles"></i> Arrhythmia Detection</h3></div>
+                            <div style="padding:1.5rem">
+                                <button id="vfdbDemoBtn" class="analyze-btn" style="background:var(--accent);width:100%"><i class="fa-solid fa-bolt"></i> Run Demo Detection</button>
+                                <p style="margin:0.75rem 0 0;font-size:0.8rem;color:var(--text-light)">
+                                    <i class="fa-solid fa-info-circle"></i> Analyzes ECG segments for VT, VF, VFL, and other life-threatening arrhythmias.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header"><h3><i class="fa-solid fa-chart-bar"></i> Rhythm Distribution</h3></div>
+                            <div style="padding:1rem;height:280px"><canvas id="vfdbDistChart"></canvas></div>
+                        </div>
+                    </div>
+                    <div class="card" style="margin-top:1rem">
+                        <div class="card-header"><h3><i class="fa-solid fa-shield-halved"></i> Arrhythmia Detection Result</h3><div class="engine-badge">1D-CNN Detector</div></div>
+                        <div id="vfdbResultBox" style="padding:1.5rem">
+                            <div class="empty-state"><i class="fa-solid fa-bolt"></i><p>Click "Run Demo Detection" to analyze an ECG segment.</p></div>
+                        </div>
+                    </div>
+                    <div class="card" style="margin-top:1rem">
+                        <div class="card-header"><h3><i class="fa-solid fa-table"></i> VFDB Records Browser</h3><button id="loadVfdbBrowseBtn" class="analyze-btn"><i class="fa-solid fa-folder-open"></i> Browse Records</button></div>
+                        <div id="vfdbBrowseContent">
+                            <div class="empty-state"><i class="fa-solid fa-file-waveform"></i><p>Click "Browse Records" to explore VFDB dataset.</p></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== PAGE 10: CardioFusion Hybrid Model ===== -->
+            <div id="fusion-page" class="page-content">
+                <div class="page-container">
+                    <div class="page-title-bar">
+                        <h2><i class="fa-solid fa-atom"></i> CardioFusion — Unified Multi-Modal Cardiac Analysis</h2>
+                        <button id="fusionInfoBtn" class="analyze-btn"><i class="fa-solid fa-microchip"></i> Model Info</button>
+                    </div>
+
+                    <!-- Architecture Overview -->
+                    <div class="card" style="margin-bottom:1rem;background:linear-gradient(135deg,#0f62fe10,#8a3ffc10,#fa4d5610)">
+                        <div style="padding:1.5rem">
+                            <h3 style="margin:0 0 0.75rem"><i class="fa-solid fa-diagram-project"></i> Architecture: Cross-Modal Transformer + MMoE</h3>
+                            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1rem" id="fusionModCards">
+                                <div class="stat-card" style="text-align:center"><div class="stat-icon"><i class="fa-solid fa-video"></i></div><span style="font-weight:600;font-size:0.85rem">Echo Video</span><br><span style="font-size:0.75rem;color:var(--text-light)">3D-CNN R2+1D</span></div>
+                                <div class="stat-card" style="text-align:center"><div class="stat-icon"><i class="fa-solid fa-image"></i></div><span style="font-weight:600;font-size:0.85rem">ECG Image</span><br><span style="font-size:0.75rem;color:var(--text-light)">2D-CNN 4-block</span></div>
+                                <div class="stat-card" style="text-align:center"><div class="stat-icon"><i class="fa-solid fa-ear-listen"></i></div><span style="font-weight:600;font-size:0.85rem">Heart Sound</span><br><span style="font-size:0.75rem;color:var(--text-light)">Mel-Spec CNN</span></div>
+                                <div class="stat-card" style="text-align:center"><div class="stat-icon"><i class="fa-solid fa-wave-square"></i></div><span style="font-weight:600;font-size:0.85rem">ECG Signal</span><br><span style="font-size:0.75rem;color:var(--text-light)">1D-CNN Detector</span></div>
+                            </div>
+                            <div style="text-align:center;padding:0.5rem;border:1px dashed var(--border);border-radius:8px;margin-bottom:0.5rem">
+                                <i class="fa-solid fa-arrows-down-to-line" style="color:var(--primary)"></i> <strong>Shared 512-dim Space</strong> → <strong>4-Layer Transformer Fusion</strong> → <strong>MMoE (4 experts × 6 tasks)</strong>
+                            </div>
+                            <div id="fusionModelStats" style="display:flex;gap:12px;flex-wrap:wrap;font-size:0.85rem;color:var(--text-light)"></div>
+                        </div>
+                    </div>
+
+                    <!-- Demo Controls -->
+                    <div class="eda-grid" style="grid-template-columns:1fr 1fr;margin-bottom:1rem">
+                        <div class="card">
+                            <div class="card-header"><h3><i class="fa-solid fa-wand-magic-sparkles"></i> Quick Demo Analysis</h3></div>
+                            <div style="padding:1.5rem">
+                                <p style="margin:0 0 1rem;color:var(--text-light);font-size:0.9rem">Run the hybrid model with synthetic data. Select which modalities to include:</p>
+                                <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:1rem">
+                                    <label class="toggle-chip" style="display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:20px;border:1px solid var(--border);cursor:pointer;font-size:0.85rem"><input type="checkbox" id="fusionModEcho" checked> <i class="fa-solid fa-video"></i> Echo Video</label>
+                                    <label class="toggle-chip" style="display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:20px;border:1px solid var(--border);cursor:pointer;font-size:0.85rem"><input type="checkbox" id="fusionModImg" checked> <i class="fa-solid fa-image"></i> ECG Image</label>
+                                    <label class="toggle-chip" style="display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:20px;border:1px solid var(--border);cursor:pointer;font-size:0.85rem"><input type="checkbox" id="fusionModSound" checked> <i class="fa-solid fa-ear-listen"></i> Heart Sound</label>
+                                    <label class="toggle-chip" style="display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:20px;border:1px solid var(--border);cursor:pointer;font-size:0.85rem"><input type="checkbox" id="fusionModSignal" checked> <i class="fa-solid fa-wave-square"></i> ECG Signal</label>
+                                </div>
+                                <button id="fusionDemoBtn" class="analyze-btn" style="width:100%;background:linear-gradient(135deg,#0f62fe,#8a3ffc)"><i class="fa-solid fa-atom"></i> Run CardioFusion Analysis</button>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header"><h3><i class="fa-solid fa-cloud-arrow-up"></i> Upload Multi-Modal Data</h3></div>
+                            <div style="padding:1.5rem">
+                                <div style="display:grid;gap:8px">
+                                    <div style="display:flex;align-items:center;gap:8px"><label style="width:100px;font-size:0.85rem;font-weight:600"><i class="fa-solid fa-video"></i> Echo:</label><input type="file" id="fusionEchoFile" accept=".avi,.mp4" style="font-size:0.8rem;flex:1"></div>
+                                    <div style="display:flex;align-items:center;gap:8px"><label style="width:100px;font-size:0.85rem;font-weight:600"><i class="fa-solid fa-image"></i> ECG Img:</label><input type="file" id="fusionImgFile" accept=".png,.jpg" style="font-size:0.8rem;flex:1"></div>
+                                    <div style="display:flex;align-items:center;gap:8px"><label style="width:100px;font-size:0.85rem;font-weight:600"><i class="fa-solid fa-ear-listen"></i> Sound:</label><input type="file" id="fusionSoundFile" accept=".wav" style="font-size:0.8rem;flex:1"></div>
+                                </div>
+                                <button id="fusionUploadBtn" class="analyze-btn" style="width:100%;margin-top:1rem"><i class="fa-solid fa-upload"></i> Analyze Uploads</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Results Panel -->
+                    <div class="card">
+                        <div class="card-header"><h3><i class="fa-solid fa-shield-halved"></i> Unified Clinical Assessment</h3><div class="engine-badge">CardioFusion Hybrid</div></div>
+                        <div id="fusionResultBox" style="padding:1.5rem">
+                            <div class="empty-state"><i class="fa-solid fa-atom" style="font-size:2rem;color:var(--primary)"></i><p>Run a demo or upload data to see the unified multi-modal cardiac assessment.</p></div>
+                        </div>
+                    </div>
+
+                    <!-- Unified 4-Model Report Panel -->
+                    <div class="card" style="margin-top:1rem;border:2px solid #0f62fe40;background:linear-gradient(135deg,#0f62fe08,#8a3ffc08,#fa4d5608)">
+                        <div class="card-header" style="border-bottom:1px solid #0f62fe30">
+                            <h3><i class="fa-solid fa-file-medical-alt" style="color:#0f62fe"></i> Conclusive Unified Multi-Model Cardiac Analysis Report</h3>
+                            <button id="fusionUnifiedBtn" class="analyze-btn" style="background:linear-gradient(135deg,#0f62fe,#8a3ffc,#fa4d56)"><i class="fa-solid fa-atom"></i> Run All 4 Models + Generate Reports</button>
+                        </div>
+                        <div id="fusionUnifiedResult" style="padding:1.5rem">
+                            <div class="empty-state">
+                                <i class="fa-solid fa-file-medical-alt" style="font-size:2rem;color:var(--primary)"></i>
+                                <p>Click "Run All 4 Models" to execute EchoNet + ECG Image + Heart Sound + ECG Signal in real-time, then generate unified Doctor and Patient reports with Heart Disease & Arrhythmia prediction.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== PAGE: Heart Disease (UCI Cleveland / Kaggle) ===== -->
+            <div id="heartdisease-page" class="page-content">
+                <div class="page-container">
+                    <div class="page-title-bar">
+                        <h2><i class="fa-solid fa-heart-pulse" style="color:#ef4444"></i> Heart Disease Prediction (UCI Cleveland)</h2>
+                        <p style="color:#94a3b8;font-size:0.85rem">Dataset: 1,025 patients · 13 clinical features · Binary classification · <a href="https://www.kaggle.com/datasets/johnsmith88/heart-disease-dataset" target="_blank" style="color:#3b82f6">Kaggle</a></p>
+                    </div>
+                    <div style="display:flex;gap:0.5rem;margin-bottom:1rem">
+                        <button class="btn" onclick="loadHeartDiseaseEDA()"><i class="fa-solid fa-chart-bar"></i> Load EDA</button>
+                        <button class="btn btn-primary" id="hd-train-btn" onclick="trainHeartDiseaseModel()"><i class="fa-solid fa-play"></i> Train Model</button>
+                    </div>
+                    <div id="hd-eda-container"></div>
+                    <div id="hd-train-results"></div>
+
+                    <div class="card" style="margin-top:1.5rem">
+                        <div class="card-header"><h3><i class="fa-solid fa-stethoscope"></i> Patient Predictor</h3></div>
+                        <div class="form-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:0.75rem;padding:1rem">
+                            <div class="form-group"><label>Age</label><input type="number" id="hd-age" placeholder="54" class="form-input"></div>
+                            <div class="form-group"><label>Sex (1=M, 0=F)</label><input type="number" id="hd-sex" placeholder="1" min="0" max="1" class="form-input"></div>
+                            <div class="form-group"><label>Chest Pain (0-3)</label><input type="number" id="hd-cp" placeholder="0" min="0" max="3" class="form-input"></div>
+                            <div class="form-group"><label>Resting BP</label><input type="number" id="hd-trestbps" placeholder="130" class="form-input"></div>
+                            <div class="form-group"><label>Cholesterol</label><input type="number" id="hd-chol" placeholder="250" class="form-input"></div>
+                            <div class="form-group"><label>Fasting BS >120</label><input type="number" id="hd-fbs" placeholder="0" min="0" max="1" class="form-input"></div>
+                            <div class="form-group"><label>Rest ECG (0-2)</label><input type="number" id="hd-restecg" placeholder="0" min="0" max="2" class="form-input"></div>
+                            <div class="form-group"><label>Max Heart Rate</label><input type="number" id="hd-thalach" placeholder="150" class="form-input"></div>
+                            <div class="form-group"><label>Exercise Angina</label><input type="number" id="hd-exang" placeholder="0" min="0" max="1" class="form-input"></div>
+                            <div class="form-group"><label>ST Depression</label><input type="number" id="hd-oldpeak" placeholder="1.0" step="0.1" class="form-input"></div>
+                            <div class="form-group"><label>Slope (0-2)</label><input type="number" id="hd-slope" placeholder="1" min="0" max="2" class="form-input"></div>
+                            <div class="form-group"><label>Major Vessels (0-4)</label><input type="number" id="hd-ca" placeholder="0" min="0" max="4" class="form-input"></div>
+                            <div class="form-group"><label>Thal (0-3)</label><input type="number" id="hd-thal" placeholder="2" min="0" max="3" class="form-input"></div>
+                        </div>
+                        <div style="padding:0 1rem 1rem"><button class="btn btn-secondary" id="hd-predict-btn" onclick="predictHeartDisease()"><i class="fa-solid fa-heart-pulse"></i> Predict Risk</button></div>
+                    </div>
+                    <div id="hd-predict-results" style="margin-top:1rem"></div>
+                </div>
+            </div>
+
+            <!-- ===== PAGE: ECG Arrhythmia Classification (MIT-BIH / Kaggle) ===== -->
+            <div id="arrhythmia-page" class="page-content">
+                <div class="page-container">
+                    <div class="page-title-bar">
+                        <h2><i class="fa-solid fa-wave-square" style="color:#06b6d4"></i> ECG Arrhythmia Classification (MIT-BIH)</h2>
+                        <p style="color:#94a3b8;font-size:0.85rem">Dataset: 109,446 heartbeats · 187 features · 5 AAMI classes · <a href="https://www.kaggle.com/datasets/sadmansakib7/ecg-arrhythmia-classification-dataset" target="_blank" style="color:#3b82f6">Kaggle</a></p>
+                    </div>
+                    <div style="display:flex;gap:0.5rem;margin-bottom:1rem">
+                        <button class="btn" onclick="loadArrhythmiaEDA()"><i class="fa-solid fa-chart-bar"></i> Load EDA</button>
+                        <button class="btn btn-primary" id="arr-train-btn" onclick="trainArrhythmiaModel()"><i class="fa-solid fa-play"></i> Train 1D-CNN</button>
+                        <button class="btn btn-secondary" id="arr-demo-btn" onclick="demoArrhythmiaPrediction()"><i class="fa-solid fa-wave-square"></i> Classify Random Heartbeat</button>
+                    </div>
+                    <div id="arr-eda-container"></div>
+                    <!-- Sample waveforms per AAMI class -->
+                    <div class="card" style="margin-top:1rem" id="arr-sample-card">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-wave-square" style="color:#06b6d4"></i> Sample Heartbeats — One per AAMI Class</h3>
+                            <span class="model-badge">MIT-BIH · 187 timesteps</span>
+                        </div>
+                        <div id="arr-samples-container">
+                            <div class="empty-state" style="padding:1.5rem"><div class="spinner"></div><p>Loading sample waveforms...</p></div>
+                        </div>
+                    </div>
+                    <div id="arr-train-results"></div>
+                    <div id="arr-predict-results" style="margin-top:1rem"></div>
+                </div>
+            </div>
+
+            <!-- ===== PAGE: Cardiologist Validation Report ===== -->
+            <div id="validation-page" class="page-content">
+                <div class="page-container">
+                    <div class="page-title-bar">
+                        <h2><i class="fa-solid fa-shield-check"></i> Clinical Validation — Cardiologist Benchmark Comparison</h2>
+                        <button id="validationBtn" class="analyze-btn" style="background:linear-gradient(135deg,#0f62fe,#198038)"><i class="fa-solid fa-stethoscope"></i> Load Validation Report</button>
+                    </div>
+                    <div class="card" style="margin-bottom:1rem;background:linear-gradient(135deg,#19803810,#0f62fe10)">
+                        <div style="padding:1.5rem">
+                            <h3 style="margin:0 0 0.5rem"><i class="fa-solid fa-user-doctor"></i> Expert Reference: 20+ Year Cardiologist Benchmarks</h3>
+                            <p style="margin:0;color:var(--text-light);font-size:0.9rem">
+                                Comparison against published peer-reviewed cardiologist performance metrics from Hannun et al. (2019),
+                                Ouyang et al. (2020), Acharya et al. (2018), CirCor 2022, and ACR/EULAR 2010.
+                                This system is a <strong>Research Prototype</strong> — prospective clinical validation required before clinical deployment.
+                            </p>
+                            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:0.75rem">
+                                <span style="font-size:0.8rem;padding:4px 10px;border-radius:12px;background:#0f62fe20;color:#0f62fe">Hannun et al. 2019 (ECG)</span>
+                                <span style="font-size:0.8rem;padding:4px 10px;border-radius:12px;background:#8a3ffc20;color:#8a3ffc">Ouyang et al. 2020 (Echo EF)</span>
+                                <span style="font-size:0.8rem;padding:4px 10px;border-radius:12px;background:#fa4d5620;color:#fa4d56">Acharya et al. 2018 (VFDB)</span>
+                                <span style="font-size:0.8rem;padding:4px 10px;border-radius:12px;background:#ff832b20;color:#ff832b">CirCor 2022 (Murmur)</span>
+                                <span style="font-size:0.8rem;padding:4px 10px;border-radius:12px;background:#19803820;color:#198038">ACR/EULAR 2010 (Arthritis)</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="validationResult">
+                        <div class="empty-state"><i class="fa-solid fa-shield-check" style="font-size:2rem;color:var(--primary)"></i><p>Click "Load Validation Report" to compare DeepCardio-RAG model metrics against 20+ year cardiologist benchmarks from published literature.</p></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== PAGE 11: Settings ===== -->
+            <div id="settings-page" class="page-content">
+                <div class="page-container">
+                    <div class="page-title-bar">
+                        <h2><i class="fa-solid fa-gear"></i> System Settings</h2>
+                    </div>
+                    <div class="settings-grid">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="fa-solid fa-server"></i> Backend Configuration</h3>
+                            </div>
+                            <div class="settings-list">
+                                <div class="setting-row"><span class="setting-label">API Server</span><span class="setting-value" id="settings-api-url">http://localhost:8000</span></div>
+                                <div class="setting-row"><span class="setting-label">ECG Encoder</span><span class="setting-value">Transformer-MoE (6-layer, 256-dim, 8-head, 4 experts)</span></div>
+                                <div class="setting-row"><span class="setting-label">Patch Size</span><span class="setting-value">50 samples = 100ms @ 500Hz → 100 patches / signal</span></div>
+                                <div class="setting-row"><span class="setting-label">Report Generator</span><span class="setting-value">GPT-2 + ECG Soft-Prompt Injection</span></div>
+                                <!-- These two were hardcoded and wrong: "Milvus Lite (COSINE, 256-dim)"
+                                     against a real external Milvus using L2 at 768-dim, and a "70K
+                                     records" arthritis model that is actually the NHANES stack.
+                                     Populated live from /api/db/stats by loadSettingsInfo(). -->
+                                <div class="setting-row"><span class="setting-label">Vector DB</span><span class="setting-value" id="settings-vectordb">loading…</span></div>
+                                <div class="setting-row"><span class="setting-label">Arthritis Model</span><span class="setting-value" id="settings-arthritis-model">loading…</span></div>
+                                <div class="setting-row"><span class="setting-label">ECG Upload</span><span class="setting-value">CSV (rows×12 leads) or JSON (12 arrays) · <a href="/api/analyze/sample-ecg" download style="color:var(--primary)">Sample CSV</a></span></div>
+                                <div class="setting-row"><span class="setting-label">Multi-Modal</span><span class="setting-value">EchoNet 3D-CNN + HeartSound Mel-CNN + VFDB 1D-CNN</span></div>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="fa-solid fa-palette"></i> Display Preferences</h3>
+                            </div>
+                            <div class="settings-list">
+                                <div class="setting-row"><span class="setting-label">Theme</span>
+                                    <div class="toggle-switch"><input type="checkbox" id="themeToggle"><label
+                                            for="themeToggle" class="toggle-label"><span
+                                                class="toggle-inner"></span></label></div>
+                                </div>
+                                <div class="setting-row"><span class="setting-label">Auto-refresh ECG</span>
+                                    <div class="toggle-switch"><input type="checkbox" id="ecgToggle" checked><label
+                                            for="ecgToggle" class="toggle-label"><span
+                                                class="toggle-inner"></span></label></div>
+                                </div>
+                                <div class="setting-row"><span class="setting-label">Report Font Size</span><select
+                                        class="settings-select">
+                                        <option>Small</option>
+                                        <option selected>Medium</option>
+                                        <option>Large</option>
+                                    </select></div>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="fa-solid fa-user-doctor"></i> Physician Profile</h3>
+                            </div>
+                            <div class="settings-list">
+                                <div class="setting-row"><span class="setting-label">Name</span><input
+                                        class="settings-input" value="N Soumya"></div>
+                                <div class="setting-row"><span class="setting-label">Department</span><input
+                                        class="settings-input" value="Student MBBS"></div>
+                                <div class="setting-row"><span class="setting-label">Credentials</span><input
+                                        class="settings-input" value="MBBS (Student)"></div>
+                                <div class="setting-row"><span class="setting-label">Institution</span><input
+                                        class="settings-input" value="DeepCardio Medical Center"></div>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="fa-solid fa-info-circle"></i> About System</h3>
+                            </div>
+                            <div class="settings-list">
+                                <div class="setting-row"><span class="setting-label">Version</span><span class="setting-value">DeepCardio-RAG v3.0</span></div>
+                                <div class="setting-row"><span class="setting-label">Build</span><span class="setting-value">2026.04.12</span></div>
+                                <!-- "Stanford iRhythm" was never used by this project (it is the
+                                     Hannun et al. 2019 dataset) and PTB-XL — the flagship encoder's
+                                     actual training set — was missing. Arthritis said "Cardiovascular
+                                     Disease 70K · APD fallback" while NHANES is loaded. -->
+                                <div class="setting-row"><span class="setting-label">ECG Dataset</span><span class="setting-value">PTB-XL 500 Hz (PhysioNet) · MIT-BIH (PhysioNet)</span></div>
+                                <div class="setting-row"><span class="setting-label">Arthritis Dataset</span><span class="setting-value" id="settings-arthritis-dataset">loading…</span></div>
+                                <div class="setting-row"><span class="setting-label">Echo Dataset</span><span class="setting-value">EchoNet-Dynamic (Stanford AIMI) — not downloaded, module untrained</span></div>
+                                <div class="setting-row"><span class="setting-label">Heart Sound</span><span class="setting-value">CirCor DigiScope 2022 (PhysioNet)</span></div>
+                                <div class="setting-row"><span class="setting-label">VA Dataset</span><span class="setting-value">MIT-BIH VFDB (PhysioNet)</span></div>
+                                <div class="setting-row"><span class="setting-label">License</span><span class="setting-value">Clinical Research Prototype</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="app.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DeepCardio-RAG | LangChain & LangGraph Integration Architecture</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --navy: #1A365D;
+    --blue: #2B6CB0;
+    --light-blue: #3182CE;
+    --bg: #F7FAFC;
+    --card-bg: #FFFFFF;
+    --text: #2D3748;
+    --muted: #718096;
+    --border: #E2E8F0;
+    --code-bg: #1a1a2e;
+    --code-text: #e2e8f0;
+    --accent: #ED8936;
+    --green: #38A169;
+    --red: #E53E3E;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    font-size: 15px;
+  }
+
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+  /* Cover */
+  .cover {
+    background: linear-gradient(135deg, var(--navy) 0%, var(--blue) 50%, var(--light-blue) 100%);
+    color: white;
+    padding: 100px 0 80px;
+    text-align: center;
+    margin-bottom: 48px;
+  }
+  .cover h1 { font-size: 48px; font-weight: 700; margin-bottom: 12px; letter-spacing: -1px; }
+  .cover h2 { font-size: 24px; font-weight: 400; opacity: 0.9; margin-bottom: 8px; }
+  .cover .subtitle { font-size: 16px; opacity: 0.7; font-style: italic; }
+  .cover .meta { margin-top: 40px; font-size: 14px; opacity: 0.6; }
+
+  /* Section headings */
+  h2 {
+    font-size: 28px; font-weight: 700; color: var(--navy);
+    margin: 56px 0 16px; padding-bottom: 8px;
+    border-bottom: 3px solid var(--blue);
+  }
+  h3 { font-size: 20px; font-weight: 600; color: var(--blue); margin: 32px 0 12px; }
+  h4 { font-size: 16px; font-weight: 600; color: var(--light-blue); margin: 20px 0 8px; }
+
+  p { margin-bottom: 14px; }
+
+  /* Code blocks */
+  pre {
+    background: var(--code-bg);
+    color: var(--code-text);
+    padding: 20px 24px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-family: 'JetBrains Mono', 'Consolas', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    margin: 16px 0 24px;
+    border-left: 4px solid var(--blue);
+  }
+  code {
+    font-family: 'JetBrains Mono', 'Consolas', monospace;
+    background: #EDF2F7;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+    color: var(--navy);
+  }
+  pre code { background: none; padding: 0; color: inherit; }
+
+  .comment { color: #6B7280; }
+  .keyword { color: #C084FC; }
+  .string { color: #86EFAC; }
+  .func { color: #93C5FD; }
+  .decorator { color: #FCD34D; }
+
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0 24px;
+    font-size: 14px;
+  }
+  th {
+    background: var(--navy);
+    color: white;
+    padding: 12px 16px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  tr:nth-child(even) td { background: #F7FAFC; }
+  tr:hover td { background: #EBF4FF; }
+
+  /* Cards */
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin: 16px 0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .card.highlight {
+    border-left: 4px solid var(--accent);
+    background: #FFFBF0;
+  }
+  .card.success {
+    border-left: 4px solid var(--green);
+    background: #F0FFF4;
+  }
+
+  /* Flow diagram */
+  .flow-diagram {
+    background: var(--code-bg);
+    color: #93C5FD;
+    padding: 24px 32px;
+    border-radius: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+    text-align: center;
+    margin: 16px 0 24px;
+    white-space: pre;
+  }
+
+  /* Comparison grid */
+  .compare-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin: 16px 0 24px;
+  }
+  .compare-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+  }
+  .compare-card.before { border-top: 4px solid var(--red); }
+  .compare-card.after { border-top: 4px solid var(--green); }
+  .compare-card h4 { margin-top: 0; }
+  .label-before { color: var(--red); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+  .label-after { color: var(--green); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+
+  /* Badge */
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .badge.kept { background: #C6F6D5; color: #22543D; }
+  .badge.new { background: #BEE3F8; color: #2A4365; }
+  .badge.changed { background: #FEFCBF; color: #744210; }
+  .badge.removed { background: #FED7D7; color: #742A2A; }
+
+  @media print {
+    .cover { padding: 60px 0 40px; }
+    pre { font-size: 11px; }
+    h2 { page-break-before: always; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== COVER ===== -->
+<div class="cover">
+  <div class="container">
+    <h1>DeepCardio-RAG</h1>
+    <h2>LangChain & LangGraph Integration Architecture</h2>
+    <p class="subtitle">Transforming the Multi-Modal Cardiac Analysis Platform</p>
+    <div class="meta">Prepared for N Rama Rao &middot; March 27, 2026</div>
+  </div>
+</div>
+
+<div class="container">
+
+<!-- ===== 1. EXECUTIVE SUMMARY ===== -->
+<h2>1. Executive Summary</h2>
+<p>This document outlines how integrating <strong>LangChain</strong> and <strong>LangGraph</strong> would transform the DeepCardio-RAG multi-modal cardiac analysis platform. Currently, the project uses hand-built RAG pipelines with hardcoded retrieval, GPT-2 with manual soft-prompt injection, and linear pipeline execution. With LangChain/LangGraph, the system gains production-grade RAG with proper vector stores, swappable LLM backends (GPT-4o, Claude, Llama), stateful multi-agent workflows with conditional branching, and built-in observability.</p>
+
+<div class="card highlight">
+  <strong>Key takeaway:</strong> LangChain replaces the broken RAG and limited LLM layer. LangGraph transforms rigid linear pipelines into intelligent, stateful, multi-agent workflows. Your custom PyTorch models (the real innovation) remain exactly as they are &mdash; they just get wrapped as LangChain Tools.
+</div>
+
+<!-- ===== 2. COMPARISON TABLE ===== -->
+<h2>2. Current Architecture vs. LangChain/LangGraph</h2>
+
+<table>
+  <tr><th>Component</th><th>Current (Hand-Built)</th><th>With LangChain/LangGraph</th></tr>
+  <tr><td><strong>Vector Store</strong></td><td>Milvus Lite (returns <code>None</code>, always falls back to hardcoded mock guidelines)</td><td>LangChain VectorStore: FAISS, Chroma, Milvus, Pinecone &mdash; swappable with 1 line</td></tr>
+  <tr><td><strong>Embeddings</strong></td><td>Custom 384-dim CNN embeddings used directly as DB queries</td><td>LangChain Embeddings: HuggingFace, OpenAI, Cohere &mdash; proper text+signal hybrid</td></tr>
+  <tr><td><strong>LLM / Report Gen</strong></td><td>GPT-2 local with manual soft-prompt injection via tensor concatenation</td><td>LangChain ChatModel: GPT-4o, Claude 3.5, Llama 3 &mdash; structured output, streaming, fallbacks</td></tr>
+  <tr><td><strong>RAG Pipeline</strong></td><td>Linear 3-step: Encode &rarr; Retrieve &rarr; Generate (no retry, no branching)</td><td>LangGraph StateGraph: conditional routing, parallel retrieval, human-in-the-loop</td></tr>
+  <tr><td><strong>Prompt Management</strong></td><td>f-string templates hardcoded in Python</td><td>LangChain PromptTemplate with variable injection and versioning</td></tr>
+  <tr><td><strong>Memory</strong></td><td>None &mdash; each request is stateless</td><td>LangGraph state persistence: conversation memory, patient history, cross-session</td></tr>
+  <tr><td><strong>Error Handling</strong></td><td><code>try/except</code> with <code>traceback.print_exc()</code></td><td>LangGraph retry nodes, fallback chains, dead-letter queues</td></tr>
+  <tr><td><strong>Observability</strong></td><td><code>print()</code> statements</td><td>LangSmith tracing: every call logged with latency, cost, and tokens</td></tr>
+  <tr><td><strong>Multi-Modal Fusion</strong></td><td>CardioFusion PyTorch model (direct call)</td><td>Wrapped as LangChain Tool &mdash; LangGraph agent decides when to invoke</td></tr>
+</table>
+
+<!-- ===== 3. LANGCHAIN ===== -->
+<h2>3. What LangChain Brings</h2>
+
+<h3>3.1 Replacing the Broken RAG Pipeline</h3>
+<p>The current pipeline in <code>core/pipeline.py</code> has a critical issue: <code>get_collection()</code> always returns <code>None</code>, so Milvus never works. Every request falls back to two hardcoded mock guidelines. LangChain fixes this fundamentally:</p>
+
+<div class="compare-grid">
+  <div class="compare-card before">
+    <p class="label-before">Current Code (core/pipeline.py)</p>
+    <pre><code><span class="keyword">class</span> <span class="func">ClinicalKnowledgeRetriever</span>:
+    <span class="keyword">def</span> <span class="func">__init__</span>(self):
+        self.collection = get_collection()  <span class="comment"># Always returns None!</span>
+
+    <span class="keyword">def</span> <span class="func">retrieve_context</span>(self, query_embeddings, top_k=3):
+        <span class="keyword">if</span> self.collection <span class="keyword">is</span> None:  <span class="comment"># Always True</span>
+            <span class="keyword">return</span> [<span class="string">"Hardcoded guideline 1"</span>, <span class="string">"Hardcoded guideline 2"</span>]</code></pre>
+  </div>
+  <div class="compare-card after">
+    <p class="label-after">With LangChain</p>
+    <pre><code><span class="keyword">from</span> langchain_community.vectorstores <span class="keyword">import</span> FAISS
+<span class="keyword">from</span> langchain_huggingface <span class="keyword">import</span> HuggingFaceEmbeddings
+
+<span class="comment"># Load clinical guidelines from multiple sources</span>
+splitter = RecursiveCharacterTextSplitter(chunk_size=500)
+docs = splitter.split_documents(load_clinical_guidelines())
+
+<span class="comment"># Create a REAL working vector store</span>
+embeddings = HuggingFaceEmbeddings(model_name=<span class="string">"all-MiniLM-L6-v2"</span>)
+vectorstore = FAISS.from_documents(docs, embeddings)
+retriever = vectorstore.as_retriever(search_kwargs={<span class="string">"k"</span>: 5})
+
+<span class="comment"># Swap to any other vector store with 1 line:</span>
+<span class="comment"># vectorstore = Chroma.from_documents(docs, embeddings)</span>
+<span class="comment"># vectorstore = Pinecone.from_documents(docs, embeddings)</span></code></pre>
+  </div>
+</div>
+
+<h3>3.2 Upgrading Report Generation from GPT-2 to Any LLM</h3>
+<p>The current system manually injects ECG embeddings into GPT-2 token space using a learned linear projection. LangChain lets you use any model with structured prompting and guaranteed output format:</p>
+
+<div class="compare-grid">
+  <div class="compare-card before">
+    <p class="label-before">Current: Manual Soft-Prompt Injection</p>
+    <pre><code><span class="comment"># Hand-wired GPT-2 with tensor manipulation</span>
+self.tokenizer = AutoTokenizer.from_pretrained(<span class="string">"gpt2"</span>)
+self.llm = AutoModelForCausalLM.from_pretrained(<span class="string">"gpt2"</span>)
+self.ecg_to_llm_space = nn.Linear(384, 768)
+
+<span class="comment"># Manual embedding concatenation</span>
+ecg_soft_prompt = self.ecg_to_llm_space(ecg_embeddings)
+text_embeddings = self.llm.transformer.wte(input_ids)
+combined = torch.cat([ecg_soft_prompt, text_embeddings], dim=1)
+outputs = self.llm.generate(inputs_embeds=combined, ...)</code></pre>
+  </div>
+  <div class="compare-card after">
+    <p class="label-after">With LangChain: Structured Output, Any LLM</p>
+    <pre><code><span class="keyword">class</span> <span class="func">ClinicalReport</span>(BaseModel):
+    findings: str
+    impression: str
+    recommendations: List[str]
+    risk_level: Literal[<span class="string">"LOW"</span>, <span class="string">"MODERATE"</span>, <span class="string">"HIGH"</span>, <span class="string">"CRITICAL"</span>]
+
+report_prompt = ChatPromptTemplate.from_messages([
+    (<span class="string">"system"</span>, <span class="string">"You are an expert cardiologist..."</span>),
+    (<span class="string">"human"</span>, <span class="string">"Modalities: {modalities}\nFindings: {findings}\nGuidelines: {context}"</span>),
+])
+
+<span class="comment"># Swap LLMs with one line:</span>
+llm = ChatOpenAI(model=<span class="string">"gpt-4o"</span>, temperature=0.2)
+<span class="comment"># llm = ChatAnthropic(model='claude-sonnet-4-20250514')</span>
+<span class="comment"># llm = ChatOllama(model='llama3')  # Free, local</span>
+
+chain = report_prompt | llm | parser
+report: ClinicalReport = chain.invoke({...})</code></pre>
+  </div>
+</div>
+
+<h3>3.3 Unified Clinical Knowledge Pipeline</h3>
+<p>Instead of hardcoded guideline strings scattered across 5 files (<code>pipeline.py</code>, <code>echonet_pipeline.py</code>, <code>ecg_image_loader.py</code>, <code>heart_sound_loader.py</code>, <code>vfdb_loader.py</code>), LangChain provides unified document loading:</p>
+
+<pre><code><span class="keyword">from</span> langchain_community.document_loaders <span class="keyword">import</span> PyPDFLoader, TextLoader, CSVLoader
+
+<span class="comment"># Load real clinical guidelines from PDFs, texts, CSVs</span>
+loaders = [
+    PyPDFLoader(<span class="string">"data/guidelines/ACC_AHA_2022.pdf"</span>),
+    PyPDFLoader(<span class="string">"data/guidelines/ESC_2021_HF.pdf"</span>),
+    TextLoader(<span class="string">"data/guidelines/ecg_interpretation.txt"</span>),
+    CSVLoader(<span class="string">"data/guidelines/drug_interactions.csv"</span>),
+]
+
+<span class="comment"># All guidelines in one searchable vector store</span>
+all_docs = []
+<span class="keyword">for</span> loader <span class="keyword">in</span> loaders:
+    all_docs.extend(loader.load_and_split(splitter))
+
+<span class="comment"># Add metadata for filtered retrieval</span>
+<span class="keyword">for</span> doc <span class="keyword">in</span> all_docs:
+    doc.metadata[<span class="string">"specialty"</span>] = classify_specialty(doc)
+
+vectorstore = FAISS.from_documents(all_docs, embeddings)
+
+<span class="comment"># Retrieve with Maximum Marginal Relevance (diversity)</span>
+retriever = vectorstore.as_retriever(
+    search_type=<span class="string">"mmr"</span>,
+    search_kwargs={<span class="string">"k"</span>: 5, <span class="string">"filter"</span>: {<span class="string">"specialty"</span>: <span class="string">"cardiology"</span>}}
+)</code></pre>
+
+<!-- ===== 4. LANGGRAPH ===== -->
+<h2>4. What LangGraph Brings</h2>
+<p>LangGraph is the game-changer. While LangChain handles RAG components, LangGraph turns your linear pipelines into intelligent, stateful workflows with conditional branching, parallel execution, and human-in-the-loop checkpoints.</p>
+
+<h3>4.1 The Core Concept: StateGraph</h3>
+<p>Currently, each pipeline runs as a fixed linear sequence. LangGraph replaces this with a directed graph where each node is a processing step, and edges can be conditional:</p>
+
+<pre><code><span class="keyword">from</span> langgraph.graph <span class="keyword">import</span> StateGraph, START, END
+<span class="keyword">from</span> typing <span class="keyword">import</span> TypedDict, Literal
+
+<span class="comment"># Define the state that flows through the entire graph</span>
+<span class="keyword">class</span> <span class="func">CardiacAnalysisState</span>(TypedDict):
+    <span class="comment"># Inputs</span>
+    patient_id: str
+    modalities: dict           <span class="comment"># Raw input data per modality</span>
+
+    <span class="comment"># Processing outputs</span>
+    embeddings: dict            <span class="comment"># Per-modality embeddings from CNN encoders</span>
+    model_predictions: dict     <span class="comment"># CNN/Fusion model outputs</span>
+    retrieved_guidelines: list  <span class="comment"># RAG-retrieved clinical context</span>
+
+    <span class="comment"># Final outputs</span>
+    clinical_report: str
+    risk_level: str
+    alert_triggered: bool
+    requires_review: bool       <span class="comment"># Human-in-the-loop flag</span></code></pre>
+
+<h3>4.2 The Cardiac Analysis Graph</h3>
+<p>This single LangGraph workflow replaces ALL current linear pipelines (ECG, Echo, Heart Sound, VFDB, CardioFusion) with one intelligent graph:</p>
+
+<pre><code><span class="keyword">def</span> <span class="func">build_cardiac_graph</span>():
+    graph = StateGraph(CardiacAnalysisState)
+
+    <span class="comment"># ---- Node 1: Input Router ----</span>
+    <span class="keyword">def</span> <span class="func">route_input</span>(state):
+        mods = [k <span class="keyword">for</span> k, v <span class="keyword">in</span> state[<span class="string">"modalities"</span>].items() <span class="keyword">if</span> v <span class="keyword">is not</span> None]
+        state[<span class="string">"active_modalities"</span>] = mods
+        <span class="keyword">return</span> state
+
+    <span class="comment"># ---- Node 2: Parallel Encoding ----</span>
+    <span class="keyword">def</span> <span class="func">encode_modalities</span>(state):
+        embeddings = {}
+        <span class="keyword">for</span> mod <span class="keyword">in</span> state[<span class="string">"active_modalities"</span>]:
+            encoder = get_encoder(mod)  <span class="comment"># Your existing CNN encoders!</span>
+            embeddings[mod] = encoder(state[<span class="string">"modalities"</span>][mod])
+        state[<span class="string">"embeddings"</span>] = embeddings
+        <span class="keyword">return</span> state
+
+    <span class="comment"># ---- Node 3: Fusion Decision ----</span>
+    <span class="keyword">def</span> <span class="func">should_fuse</span>(state) -> Literal[<span class="string">'fuse'</span>, <span class="string">'single'</span>]:
+        <span class="keyword">return</span> <span class="string">"fuse"</span> <span class="keyword">if</span> len(state[<span class="string">"active_modalities"</span>]) > 1 <span class="keyword">else</span> <span class="string">"single"</span>
+
+    <span class="comment"># ---- Node 4a: CardioFusion (multi-modal) ----</span>
+    <span class="keyword">def</span> <span class="func">run_fusion</span>(state):
+        model = get_cardiofusion_model()
+        state[<span class="string">"model_predictions"</span>] = model.inference(state[<span class="string">"embeddings"</span>])
+        <span class="keyword">return</span> state
+
+    <span class="comment"># ---- Node 5: RAG Retrieval (LangChain) ----</span>
+    <span class="keyword">def</span> <span class="func">retrieve_guidelines</span>(state):
+        query = build_query_from_predictions(state[<span class="string">"model_predictions"</span>])
+        docs = retriever.invoke(query)  <span class="comment"># LangChain retriever!</span>
+        state[<span class="string">"retrieved_guidelines"</span>] = [d.page_content <span class="keyword">for</span> d <span class="keyword">in</span> docs]
+        <span class="keyword">return</span> state
+
+    <span class="comment"># ---- Node 6: Risk-Based Routing ----</span>
+    <span class="keyword">def</span> <span class="func">assess_risk</span>(state) -> Literal[<span class="string">'critical'</span>, <span class="string">'review'</span>, <span class="string">'normal'</span>]:
+        risk = state[<span class="string">"model_predictions"</span>].get(<span class="string">"cardiac_risk_score"</span>, 0)
+        <span class="keyword">if</span> risk > 80: <span class="keyword">return</span> <span class="string">"critical"</span>
+        <span class="keyword">elif</span> risk > 50: <span class="keyword">return</span> <span class="string">"review"</span>   <span class="comment"># Needs human cardiologist</span>
+        <span class="keyword">return</span> <span class="string">"normal"</span>
+
+    <span class="comment"># ---- Node 7: Report Generation (LangChain LLM) ----</span>
+    <span class="keyword">def</span> <span class="func">generate_report</span>(state):
+        chain = report_prompt | llm | parser
+        state[<span class="string">"clinical_report"</span>] = chain.invoke({...})
+        <span class="keyword">return</span> state
+
+    <span class="comment"># ===== WIRE THE GRAPH =====</span>
+    graph.add_node(<span class="string">"route"</span>, route_input)
+    graph.add_node(<span class="string">"encode"</span>, encode_modalities)
+    graph.add_node(<span class="string">"fuse"</span>, run_fusion)
+    graph.add_node(<span class="string">"single"</span>, run_single_analysis)
+    graph.add_node(<span class="string">"retrieve"</span>, retrieve_guidelines)
+    graph.add_node(<span class="string">"report"</span>, generate_report)
+    graph.add_node(<span class="string">"alert"</span>, trigger_alert)
+    graph.add_node(<span class="string">"review"</span>, flag_for_review)
+
+    graph.add_edge(START, <span class="string">"route"</span>)
+    graph.add_edge(<span class="string">"route"</span>, <span class="string">"encode"</span>)
+    graph.add_conditional_edges(<span class="string">"encode"</span>, should_fuse,
+        {<span class="string">"fuse"</span>: <span class="string">"fuse"</span>, <span class="string">"single"</span>: <span class="string">"single"</span>})
+    graph.add_edge(<span class="string">"fuse"</span>, <span class="string">"retrieve"</span>)
+    graph.add_edge(<span class="string">"single"</span>, <span class="string">"retrieve"</span>)
+    graph.add_edge(<span class="string">"retrieve"</span>, <span class="string">"report"</span>)
+    graph.add_conditional_edges(<span class="string">"report"</span>, assess_risk,
+        {<span class="string">"critical"</span>: <span class="string">"alert"</span>, <span class="string">"review"</span>: <span class="string">"review"</span>, <span class="string">"normal"</span>: END})
+
+    <span class="keyword">return</span> graph.compile()</code></pre>
+
+<h3>4.3 Visual Flow Diagram</h3>
+<div class="flow-diagram">
+                       [START]
+                         │
+                    [Route Input]
+                         │
+                  [Encode Modalities]  ← Your existing CNN encoders
+                      /       \
+               multi-modal   single-modal
+                   /               \
+           [CardioFusion]    [Single Analysis]
+                   \               /
+                [RAG Retrieval]  ← LangChain FAISS/Chroma
+                         │
+              [Generate Report]  ← GPT-4o / Claude / Llama
+                 /     |      \
+           CRITICAL  REVIEW  NORMAL
+              /       |          \
+       [Alert]  [Human Review]  [END]
+          |          |
+        [END]      [END]
+</div>
+
+<h3>4.4 State Persistence and Human-in-the-Loop</h3>
+<p>LangGraph can <strong>pause</strong> at any node (e.g., waiting for a cardiologist to review a borderline case) and <strong>resume</strong> later. This is impossible with the current linear pipeline:</p>
+
+<pre><code><span class="keyword">from</span> langgraph.checkpoint.sqlite <span class="keyword">import</span> SqliteSaver
+
+<span class="comment"># Persist graph state to SQLite (survives server restarts)</span>
+checkpointer = SqliteSaver.from_conn_string(<span class="string">"data/cardiac_graph.db"</span>)
+app = graph.compile(checkpointer=checkpointer)
+
+<span class="comment"># Start analysis (may pause at human review node)</span>
+config = {<span class="string">"configurable"</span>: {<span class="string">"thread_id"</span>: <span class="string">"patient_12345"</span>}}
+result = app.invoke(initial_state, config)
+
+<span class="comment"># Later: cardiologist provides review and graph resumes</span>
+<span class="keyword">if</span> result[<span class="string">"requires_review"</span>]:
+    app.update_state(config, {
+        <span class="string">"cardiologist_notes"</span>: <span class="string">"Confirmed borderline EF. Recommend follow-up."</span>,
+        <span class="string">"approved"</span>: True
+    })
+    final = app.invoke(None, config)  <span class="comment"># Resume from checkpoint</span></code></pre>
+
+<!-- ===== 5. MULTI-AGENT ===== -->
+<h2>5. Multi-Agent Architecture</h2>
+<p>The most powerful upgrade: instead of monolithic pipelines, LangGraph enables specialized agents that collaborate:</p>
+
+<table>
+  <tr><th>Agent</th><th>Role</th><th>Tools Available</th></tr>
+  <tr><td><strong>Triage Agent</strong></td><td>Receives patient data, decides which analyses to run</td><td>Input validation, modality detection, urgency classification</td></tr>
+  <tr><td><strong>ECG Agent</strong></td><td>Analyzes ECG signals and images</td><td>ECGEncoder1DCNN, ECGImageClassifier, ECG RAG retriever</td></tr>
+  <tr><td><strong>Echo Agent</strong></td><td>Processes echocardiogram videos, predicts EF</td><td>EchoVideoEncoder, EFRegressor, Echo RAG retriever</td></tr>
+  <tr><td><strong>Auscultation Agent</strong></td><td>Analyzes heart sounds, detects murmurs</td><td>HeartSoundClassifier, mel spectrogram processor</td></tr>
+  <tr><td><strong>Arrhythmia Agent</strong></td><td>Monitors for dangerous ventricular rhythms</td><td>VentricularArrhythmiaDetector, VFDB classifier</td></tr>
+  <tr><td><strong>Fusion Agent</strong></td><td>Combines multi-modal results</td><td>CardioFusion model, cross-modal Transformer</td></tr>
+  <tr><td><strong>Report Agent</strong></td><td>Synthesizes findings into clinical report</td><td>LLM (GPT-4o/Claude), RAG retriever, PDF generator</td></tr>
+</table>
+
+<!-- ===== 6. WHAT STAYS ===== -->
+<h2>6. What Stays The Same (Your PyTorch Models)</h2>
+<p>LangChain/LangGraph does <strong>NOT</strong> replace your deep learning models. All your custom neural networks remain exactly as they are &mdash; they get wrapped as LangChain Tools:</p>
+
+<table>
+  <tr><th>Component</th><th>Status</th><th>Integration</th></tr>
+  <tr><td>ECGEncoder1DCNN</td><td><span class="badge kept">KEPT AS-IS</span></td><td>Wrapped as LangChain Tool, called by ECG Agent</td></tr>
+  <tr><td>EchoVideoEncoder (R2+1D)</td><td><span class="badge kept">KEPT AS-IS</span></td><td>Wrapped as LangChain Tool, called by Echo Agent</td></tr>
+  <tr><td>ECGImageClassifier (2D-CNN)</td><td><span class="badge kept">KEPT AS-IS</span></td><td>Wrapped as LangChain Tool, called by ECG Agent</td></tr>
+  <tr><td>HeartSoundClassifier</td><td><span class="badge kept">KEPT AS-IS</span></td><td>Wrapped as LangChain Tool, called by Sound Agent</td></tr>
+  <tr><td>VentricularArrhythmiaDetector</td><td><span class="badge kept">KEPT AS-IS</span></td><td>Wrapped as LangChain Tool, called by Arrhythmia Agent</td></tr>
+  <tr><td>CardioFusion (Transformer+MMoE)</td><td><span class="badge kept">KEPT AS-IS</span></td><td>Wrapped as LangChain Tool, called by Fusion Agent</td></tr>
+  <tr><td>Tabular BERT+MoE (Arthritis)</td><td><span class="badge kept">KEPT AS-IS</span></td><td>Separate LangGraph sub-graph</td></tr>
+</table>
+
+<p>The wrapping is minimal:</p>
+<pre><code><span class="keyword">from</span> langchain_core.tools <span class="keyword">import</span> tool
+
+<span class="decorator">@tool</span>
+<span class="keyword">def</span> <span class="func">analyze_ecg_signal</span>(signal_path: str) -> dict:
+    <span class="string">"""Analyze a 12-lead ECG signal and return arrhythmia classification."""</span>
+    signal = load_ecg_signal(signal_path)
+    encoder = get_model().encoder  <span class="comment"># Your existing 1D-CNN</span>
+    embedding = encoder(signal)
+    <span class="keyword">return</span> {<span class="string">"embedding"</span>: embedding, <span class="string">"classification"</span>: classify(embedding)}
+
+<span class="decorator">@tool</span>
+<span class="keyword">def</span> <span class="func">run_cardiofusion</span>(modality_data: dict) -> dict:
+    <span class="string">"""Run multi-modal CardioFusion analysis."""</span>
+    model = get_cardiofusion_model()  <span class="comment"># Your existing hybrid model</span>
+    <span class="keyword">return</span> model.inference(modality_data)</code></pre>
+
+<!-- ===== 7. NEW CAPABILITIES ===== -->
+<h2>7. New Capabilities Unlocked</h2>
+
+<h3>7.1 Conversational Clinical Interface</h3>
+<p>With LangGraph memory, the system supports multi-turn conversations about a patient case:</p>
+<pre><code><span class="comment"># Doctor: "Analyze this ECG"</span>
+<span class="comment"># System: [Runs ECG pipeline, returns findings]</span>
+<span class="comment"># Doctor: "Compare with the echo from last week"</span>
+<span class="comment"># System: [Retrieves previous echo from state, runs fusion, shows comparison]</span>
+<span class="comment"># Doctor: "What does the latest ACC guideline say about this pattern?"</span>
+<span class="comment"># System: [RAG retrieves specific guideline, presents with context]</span></code></pre>
+
+<h3>7.2 Real-Time Streaming</h3>
+<p>The frontend shows progress as each graph node completes, instead of waiting for the full result:</p>
+<pre><code><span class="decorator">@app.post</span>(<span class="string">'/api/analyze/stream'</span>)
+<span class="keyword">async def</span> <span class="func">stream_analysis</span>(request):
+    <span class="keyword">async for</span> event <span class="keyword">in</span> app.astream(state, config):
+        <span class="comment"># Frontend sees each step live:</span>
+        <span class="comment"># "Encoding ECG signal..."</span>
+        <span class="comment"># "Retrieved 5 clinical guidelines"</span>
+        <span class="comment"># "Generating report with GPT-4o..."</span>
+        <span class="keyword">yield</span> ServerSentEvent(data=json.dumps(event))</code></pre>
+
+<h3>7.3 Automatic LLM Fallback Chains</h3>
+<pre><code>llm_with_fallback = ChatOpenAI(model=<span class="string">'gpt-4o'</span>).with_fallbacks([
+    ChatAnthropic(model=<span class="string">'claude-sonnet-4-20250514'</span>),  <span class="comment"># If GPT-4o fails</span>
+    ChatOllama(model=<span class="string">'llama3'</span>),             <span class="comment"># Local fallback (always works)</span>
+])</code></pre>
+
+<h3>7.4 LangSmith Observability</h3>
+<p>Every LLM call, retrieval query, and agent decision is automatically traced. You can see exactly why the system made a particular diagnosis, how long each step took, and how much it cost. Essential for medical AI auditing.</p>
+
+<!-- ===== 8. FILE CHANGES ===== -->
+<h2>8. Files That Would Change</h2>
+
+<table>
+  <tr><th>File</th><th>Change</th></tr>
+  <tr><td><code>core/pipeline.py</code></td><td><span class="badge changed">MODIFIED</span> Replace Retriever + ReportGenerator with LangChain chain</td></tr>
+  <tr><td><code>core/echonet_pipeline.py</code></td><td><span class="badge changed">MODIFIED</span> Replace Echo Retriever + Generator with LangChain chain</td></tr>
+  <tr><td><code>core/langchain_rag.py</code></td><td><span class="badge new">NEW</span> Unified RAG: vector store, embeddings, retriever, prompts</td></tr>
+  <tr><td><code>core/langgraph_workflow.py</code></td><td><span class="badge new">NEW</span> StateGraph with all nodes, edges, conditional routing</td></tr>
+  <tr><td><code>core/agents.py</code></td><td><span class="badge new">NEW</span> Multi-agent definitions (Triage, ECG, Echo, Sound, etc.)</td></tr>
+  <tr><td><code>core/tools.py</code></td><td><span class="badge new">NEW</span> LangChain Tool wrappers around existing PyTorch models</td></tr>
+  <tr><td><code>database/db_manager.py</code></td><td><span class="badge changed">MODIFIED</span> Replace Milvus with LangChain VectorStore (FAISS/Chroma)</td></tr>
+  <tr><td><code>main.py</code></td><td><span class="badge changed">MODIFIED</span> Simplify: endpoints call <code>graph.invoke()</code></td></tr>
+  <tr><td><code>requirements.txt</code></td><td><span class="badge changed">MODIFIED</span> Add langchain, langgraph, faiss-cpu, etc.</td></tr>
+  <tr><td><code>core/hybrid_model.py</code></td><td><span class="badge kept">NO CHANGE</span> (wrapped as Tool)</td></tr>
+  <tr><td><code>core/ecg_image_loader.py</code></td><td><span class="badge kept">NO CHANGE</span> (wrapped as Tool)</td></tr>
+  <tr><td><code>core/heart_sound_loader.py</code></td><td><span class="badge kept">NO CHANGE</span> (wrapped as Tool)</td></tr>
+  <tr><td><code>core/vfdb_loader.py</code></td><td><span class="badge kept">NO CHANGE</span> (wrapped as Tool)</td></tr>
+  <tr><td><code>core/video_encoder.py</code></td><td><span class="badge kept">NO CHANGE</span> (wrapped as Tool)</td></tr>
+</table>
+
+<!-- ===== 9. REQUIREMENTS ===== -->
+<h2>9. New Dependencies</h2>
+<pre><code><span class="comment"># Core LangChain</span>
+langchain>=0.3.0
+langchain-core>=0.3.0
+langchain-community>=0.3.0
+
+<span class="comment"># LangGraph (stateful workflows)</span>
+langgraph>=0.2.0
+langgraph-checkpoint-sqlite>=1.0.0
+
+<span class="comment"># LLM Providers (pick one or more)</span>
+langchain-openai>=0.2.0        <span class="comment"># GPT-4o</span>
+langchain-anthropic>=0.3.0     <span class="comment"># Claude</span>
+langchain-ollama>=0.2.0        <span class="comment"># Local Llama 3 (free)</span>
+
+<span class="comment"># Vector Store</span>
+faiss-cpu>=1.8.0               <span class="comment"># Fast local vector search</span>
+
+<span class="comment"># Embeddings</span>
+langchain-huggingface>=0.1.0
+sentence-transformers>=3.0.0
+
+<span class="comment"># Observability</span>
+langsmith>=0.1.0</code></pre>
+
+<!-- ===== 10. SUMMARY ===== -->
+<h2>10. Before vs After Summary</h2>
+
+<table>
+  <tr><th>Capability</th><th>Before</th><th>After</th></tr>
+  <tr><td><strong>RAG</strong></td><td>Broken (always returns hardcoded mock)</td><td>Production FAISS/Chroma with real guideline retrieval</td></tr>
+  <tr><td><strong>Report Quality</strong></td><td>GPT-2 (124M params, no instruction following)</td><td>GPT-4o / Claude / Llama with structured output</td></tr>
+  <tr><td><strong>Pipeline Logic</strong></td><td>Linear, fixed, no branching</td><td>Conditional graph with parallel execution</td></tr>
+  <tr><td><strong>Error Recovery</strong></td><td>Crash on failure</td><td>Automatic retry + LLM fallback chains</td></tr>
+  <tr><td><strong>State</strong></td><td>Stateless (each request independent)</td><td>Persistent state with conversation memory</td></tr>
+  <tr><td><strong>Human Review</strong></td><td>Not possible</td><td>Graph pauses, waits for cardiologist, resumes</td></tr>
+  <tr><td><strong>Observability</strong></td><td><code>print()</code> statements</td><td>Full LangSmith tracing with cost & latency</td></tr>
+  <tr><td><strong>Multi-Agent</strong></td><td>Monolithic pipeline</td><td>7 specialized agents collaborating</td></tr>
+  <tr><td><strong>Streaming</strong></td><td>Wait for full result</td><td>Real-time node-by-node progress</td></tr>
+  <tr><td><strong>LLM Flexibility</strong></td><td>Locked to GPT-2</td><td>Any LLM, swappable with 1 line</td></tr>
+  <tr><td><strong>PyTorch Models</strong></td><td>Direct calls</td><td>Same models, wrapped as LangChain Tools</td></tr>
+</table>
+
+<div class="card success" style="margin-top: 32px; margin-bottom: 48px;">
+  <strong>Bottom line:</strong> LangChain replaces the broken RAG and limited LLM layer. LangGraph transforms rigid linear pipelines into intelligent, stateful, multi-agent workflows. Your custom PyTorch models &mdash; ECGEncoder1DCNN, EchoVideoEncoder, CardioFusion, and all others &mdash; remain exactly as they are. They are the real innovation; LangChain/LangGraph simply gives them a production-grade orchestration layer.
+</div>
+
+</div>
+</body>
+</html>

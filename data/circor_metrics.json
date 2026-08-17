@@ -1,0 +1,28 @@
+{
+  "dataset": "CirCor DigiScope (PhysioNet), 942 subjects; 2057 train / 480 val / 626 test recordings",
+  "synthetic": false,
+  "task": "3-class murmur {Absent, Present, Unknown} + Present-vs-Absent AUC",
+  "classes": [
+    "Absent",
+    "Present",
+    "Unknown"
+  ],
+  "n_train": 2057,
+  "n_val": 480,
+  "n_test": 626,
+  "split": "patient-independent (subject-level)",
+  "evaluation": "held-out TEST set only (no train-set eval)",
+  "test_accuracy": 0.7604,
+  "test_f1_macro": 0.5347,
+  "test_per_class_f1": {
+    "Absent": 0.8616,
+    "Present": 0.4776,
+    "Unknown": 0.2651
+  },
+  "test_present_vs_absent_auc": 0.7611,
+  "best_val_f1_macro": 0.5539,
+  "model_params": 44707,
+  "training_time_s": 1249.3,
+  "device": "cuda",
+  "benchmark_note": "Oliveira et al. CirCor JBHI 2022 report ~0.79 weighted murmur accuracy; this genuine run is reported without claiming that value."
+}

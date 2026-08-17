@@ -1,0 +1,10 @@
+promt : Based on Above Review points revise pyhon code and proper algorithms , results only use genuine results and references only top jounals and confernce , citations also
+
+
+
+Remaining review items
+
+1. CardioFusion re-run in Colab (cell 15) for the clean val-selected number — still pending on your side.
+2. Update the paper results tables with the genuine Colab numbers (replace the fabricated 99.1% acc / 100% AUC arthritis and template ECG figures) — this is the last big one.
+
+Want the pdflatex commands, or shall we move to the results-table update?

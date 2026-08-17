@@ -1,0 +1,1140 @@
+%=============================================================================
+%  DeepCardio-RAG — Genuine Training Pipeline: Technical Specification Report
+%
+%  Companion document to DeepCardio_Genuine_Training.ipynb and to
+%  DeepCardio_CompIntel_Submit.tex (the current paper version).
+%
+%  PROVENANCE RULE FOR THIS DOCUMENT:
+%  Every architectural figure is read from the SOURCE CODE, and every
+%  performance figure from data/genuine_results.json (+ data/vfdb_cv_metrics.json).
+%  Nothing is copied from a paper draft. Where the paper and the code
+%  disagree, the code value is given in the body and the disagreement is
+%  recorded in Appendix A.
+%
+%  Compile:  pdflatex DeepCardio_Genuine_Training_TechReport.tex   (x2)
+%=============================================================================
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[margin=2.2cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage[hidelinks,bookmarks=true]{hyperref}
+
+\definecolor{dcblue}{RGB}{18,72,120}
+\definecolor{dcgrey}{RGB}{95,105,115}
+\definecolor{dcwarn}{RGB}{150,60,20}
+\definecolor{rowbg}{RGB}{243,246,249}
+
+\titleformat{\section}{\normalfont\Large\bfseries\color{dcblue}}{\thesection}{0.7em}{}
+\titleformat{\subsection}{\normalfont\large\bfseries\color{dcblue}}{\thesubsection}{0.7em}{}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{dcgrey}DeepCardio-RAG --- Genuine Training Pipeline}
+\fancyhead[R]{\small\color{dcgrey}\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\newcommand{\code}[1]{\texttt{\small #1}}
+\newcommand{\yes}{\textcolor{dcblue}{\textbf{yes}}}
+\newcommand{\no}{\textcolor{dcwarn}{\textbf{no}}}
+
+% Boxed note environment
+\usepackage{mdframed}
+\newmdenv[linecolor=dcblue,linewidth=0.9pt,backgroundcolor=rowbg,
+          innertopmargin=6pt,innerbottommargin=6pt,skipabove=8pt,skipbelow=8pt]{notebox}
+
+% Long \texttt{} identifiers cannot hyphenate; prefer looser interword
+% spacing over text running into the margin.
+\sloppy
+\emergencystretch=3em
+
+\begin{document}
+
+%-----------------------------------------------------------------------------
+\begin{titlepage}
+\centering
+\vspace*{2.2cm}
+{\Huge\bfseries\color{dcblue} DeepCardio-RAG\par}
+\vspace{0.6cm}
+{\LARGE Genuine Training Pipeline\par}
+\vspace{0.35cm}
+{\large Technology Stack, Datasets, Algorithms,\\[2pt]
+and Input\,/\,Process\,/\,Output Specification\par}
+\vspace{1.1cm}
+{\large Technical Specification Report\par}
+\vspace{0.25cm}
+{\color{dcgrey}Companion to \code{DeepCardio\_Genuine\_Training.ipynb}\par}
+\vspace{2.0cm}
+
+\begin{minipage}{0.86\textwidth}
+\begin{notebox}
+\textbf{Provenance of the figures in this document.} Architecture and
+hyperparameter values are read from the implementation source
+(\code{core/}, \code{colab\_train\_genuine.py}); performance values are read
+from \code{data/genuine\_results.json} and
+\code{data/vfdb\_cv\_metrics.json}, which store held-out evaluations
+produced by the notebook itself. No value is copied from a manuscript
+draft. Where a paper draft and the code disagree, the \emph{code} value
+appears in the body and the disagreement is recorded in
+Appendix~\ref{app:delta}.
+
+\medskip
+\textbf{Reporting policy.} Only genuinely trained modules on benchmark data
+are reported. Modules without trained weights are marked
+\textsc{not trained} and carry no performance figures; no demonstration-patient
+or synthetic-signal output is presented as a result.
+\end{notebox}
+\end{minipage}
+
+\vfill
+{\color{dcgrey}\small Research prototype --- not cleared for clinical use.\par}
+\vspace{0.8cm}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+%=============================================================================
+\section{Purpose and Scope}
+%=============================================================================
+
+\code{DeepCardio\_Genuine\_Training.ipynb} is the single, current training
+notebook for the DeepCardio-RAG system. Its purpose is narrow and
+deliberate: train every module that can be trained on a
+\emph{public benchmark dataset}, evaluate it on a \emph{held-out} split,
+and persist both the weights and the measured metrics to disk. It exists
+to replace an earlier situation in which several modules ran on
+random-initialised weights while still emitting clinical-looking output.
+
+This report documents four things, in the order requested:
+
+\begin{enumerate}[leftmargin=1.4em,itemsep=2pt]
+  \item the complete \textbf{technology stack} (Section~\ref{sec:stack});
+  \item the \textbf{datasets} used, with provenance, size, split protocol
+        and known integrity issues (Section~\ref{sec:data});
+  \item the \textbf{algorithms} implemented per module
+        (Section~\ref{sec:algo});
+  \item the \textbf{input\,$\rightarrow$\,process\,$\rightarrow$\,expected
+        output} specification for each module, including the observed
+        held-out values (Section~\ref{sec:io}).
+\end{enumerate}
+
+The notebook does \emph{not} serve the web dashboard. The FastAPI
+application (\code{main.py}) is a separate local process; the notebook and
+the dashboard share only the artefacts written into \code{data/}.
+
+%=============================================================================
+\section{Technology Stack}
+\label{sec:stack}
+%=============================================================================
+
+\subsection{Runtime topology}
+
+The notebook is \emph{dual-runtime}. Cells are tagged for one of two
+execution backends, and the two halves never communicate during a run.
+
+\begin{table}[!ht]
+\centering
+\caption{Execution backends and their responsibilities}
+\label{tab:runtime}
+\small
+\begin{tabular}{@{}p{3.2cm}p{5.3cm}p{6.6cm}@{}}
+\toprule
+\textbf{Backend} & \textbf{Hardware} & \textbf{Responsibility}\\
+\midrule
+Colab cloud & NVIDIA T4 GPU, Google Drive mounted at
+\code{/content/drive} &
+All model training, dataset download, ablation studies. Cannot reach the
+private vector database.\\
+\addlinespace
+Local runtime & Windows host that also runs the Milvus container;
+Jupyter exposed over \code{jupyter\_http\_over\_ws} &
+Vector-database checks, retrieval grounding, pinned Milvus client.\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The split works without any network tunnel because \emph{no training
+module touches the vector database} --- the training code contains no
+reference to \code{db\_manager}, \code{init\_db} or \code{pymilvus}. The
+hand-off between the two halves is Google Drive itself: weights written to
+\code{data/} on Colab synchronise back down to the local project folder.
+The largest artefact, \code{ecg\_ptbxl\_encoder.pt}, is approximately
+55~MB, so the local half must wait for that synchronisation to finish
+before it can confirm that the pipeline is using trained weights.
+
+\subsection{Software stack}
+
+\small
+\begin{longtable}{@{}p{2.9cm}p{4.1cm}p{8.3cm}@{}}
+\caption{Software components and their role in the training pipeline}
+\label{tab:stack}\\
+\toprule
+\textbf{Layer} & \textbf{Component} & \textbf{Role}\\
+\midrule
+\endfirsthead
+\multicolumn{3}{@{}l}{\small\itshape Table~\ref{tab:stack} continued}\\
+\toprule
+\textbf{Layer} & \textbf{Component} & \textbf{Role}\\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+Deep learning & PyTorch (\code{torch}, \code{torch.nn}, \code{torch.optim})
+& All eight neural modules; CUDA on Colab, CPU fallback locally.\\
+& \code{torch.utils.data} & \code{DataLoader} / \code{TensorDataset} /
+custom \code{Dataset} for the video and audio paths.\\
+\addlinespace
+Language models & \code{transformers==4.44.2} & GPT-2 (124M) report decoder
+with soft-prompt injection; pinned because a newer build broke
+\code{GPT2LMHeadModel} import on Colab.\\
+& \code{sentence-transformers} & Sentence-BERT \code{all-mpnet-base-v2},
+768-dim embeddings for retrieval.\\
+\addlinespace
+Classical ML & \code{scikit-learn} &
+\code{RepeatedStratifiedKFold}, \code{StandardScaler}, \code{KNNImputer},
+\code{GradientBoostingClassifier}, \code{RandomForestClassifier},
+\code{ExtraTreesClassifier}, \code{LogisticRegression}, and all metrics
+(accuracy, macro-$F_1$, ROC-AUC, Brier).\\
+& \code{joblib} & Persists fitted scalers and feature-column lists
+alongside the network weights.\\
+\addlinespace
+Signal / data I/O & \code{wfdb>=4.3.1} & Decodes PhysioNet WFDB waveforms
+and annotations (PTB-XL \code{.hea}/\code{.dat}, VFDB \code{.atr}).
+\textbf{Version-critical} --- see Section~\ref{sec:pins}.\\
+& \code{pandas==2.2.3} & Tabular loaders (NHANES, UCI Cleveland, MIT-BIH
+CSV). Pinned by the \code{wfdb} requirement.\\
+& \code{numpy} (2.x) & Array backbone throughout.\\
+& \code{opencv-python-headless} & Echo video decoding and frame resizing.\\
+& \code{kagglehub} & Programmatic Kaggle dataset download (PTB-XL, NHANES).\\
+\addlinespace
+Vector database & \code{pymilvus==2.6.9} & Client for Milvus standalone
+\code{v2.6.2} at \code{localhost:19530}. \textbf{Version-critical}.\\
+& Milvus standalone (Docker) & Collection
+\code{cardio\_knowledge\_base}: 768-dim, $L_2$ metric, \code{IVF\_FLAT}
+index, \code{nlist}~=~2048.\\
+\addlinespace
+Serving (separate) & \code{fastapi} + \code{uvicorn} & REST API and static
+dashboard; not exercised by the notebook.\\
+& \code{fpdf2} & Dual-audience PDF report generation.\\
+\addlinespace
+Configuration & \code{pydantic-settings} & \code{config.py} settings object;
+real environment variables take precedence over \code{.env}.\\
+\end{longtable}
+
+\subsection{Version pins that are load-bearing}
+\label{sec:pins}
+
+Three pins in the dependency cell are not cosmetic. Each was added in
+response to a specific, diagnosed failure.
+
+\begin{table}[!ht]
+\centering
+\caption{Load-bearing version pins}
+\label{tab:pins}
+\small
+\begin{tabular}{@{}p{3.0cm}p{11.8cm}@{}}
+\toprule
+\textbf{Pin} & \textbf{Failure it prevents}\\
+\midrule
+\code{wfdb>=4.3.1} &
+Under NumPy~2, older \code{wfdb.rdann()} raises
+\code{OverflowError: Python integer 256 out of bounds for uint8}. The VFDB
+loader then fell back to a hand-rolled byte parser whose SKIP handling
+byte-swapped the 32-bit interval, yielding annotation offsets up to
+$1.99\times10^{10}$ on a 525{,}000-sample signal. Every window fell before
+the first valid annotation and was labelled Normal, producing a
+\emph{single-class} dataset that scored accuracy 1.0 --- a trivial
+solution, not a result.\\
+\addlinespace
+\code{pandas==2.2.3} &
+Required by \code{wfdb} 4.3.1. Colab's baseline is 2.2.2; a blanket
+\code{--upgrade} pulls pandas 3.0.x and breaks the pandas-heavy tabular
+pipelines. The resulting
+\code{google-colab 1.0.0 requires pandas==2.2.2} warning is expected and
+harmless --- it governs Colab's own table display, not training.\\
+\addlinespace
+\code{pymilvus==2.6.9} &
+\code{pymilvus} 3.x removes the 2.x ORM API
+(\code{connections} / \code{Collection} / \code{FieldSchema}) that
+\code{database/db\_manager.py} is built on, and pulls
+\code{setuptools}~83, violating \code{torch}'s \code{setuptools<82}
+requirement.\\
+\addlinespace
+\code{torch} (not upgraded) &
+Colab's preinstalled CUDA build works; upgrading it breaks
+\code{transformers} model imports (e.g.\
+\code{Could not import GPT2LMHeadModel}).\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Notebook execution map}
+
+\begin{table}[!ht]
+\centering
+\caption{Cell-to-runtime map (0-indexed over all cells, markdown included)}
+\label{tab:cells}
+\small
+\begin{tabular}{@{}p{1.6cm}p{2.4cm}p{10.6cm}@{}}
+\toprule
+\textbf{Cell} & \textbf{Runtime} & \textbf{Function}\\
+\midrule
+2  & either & Runtime detection; mounts Drive on Colab, sets
+\code{MILVUS\_HOST}/\code{MILVUS\_PORT} locally; inserts CWD on
+\code{sys.path}.\\
+4  & Colab & Dependency install with the pins of Table~\ref{tab:pins}.\\
+5  & either & In-kernel version assertion (pip output alone is not proof
+the kernel took the upgrade).\\
+7  & Colab & Kaggle credentials.\\
+9  & Colab & PTB-XL completeness fix; forces a full download to local disk
+and repoints the loader.\\
+11 & Colab & PhysioNet fetch of VFDB and CirCor via
+\code{wget -r -N -c}; completeness check against \code{RECORDS}.\\
+13 & Colab & Optional SHA256 byte-level integrity check.\\
+15 & Colab & \code{run\_all()} --- trains every module in sequence.\\
+17--19, 21 & Colab & Individual modules: PTB-XL flagship, arthritis,
+MIT-BIH arrhythmia, CardioFusion.\\
+20 & local & Pins \code{pymilvus} to 2.6.9.\\
+23--26 & Colab & Echo, VFDB, PCG, heart disease.\\
+28--29 & local & Milvus connection and schema check; confirms the project
+is on the real server and not a silent fallback.\\
+31 & local & Confirms the pipeline loads the trained encoder and that
+retrieval is diagnosis-grounded.\\
+33 & either & RAG retrieval evaluation (in-memory).\\
+35 & Colab & Ablation studies.\\
+37 & Colab & VFDB recording-level cross-validation.\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{notebox}
+\textbf{Two operational cautions carried in the notebook itself.}
+(i)~Cell~4 pins \emph{Colab's} environment; it should not be re-run on the
+local runtime, where it would churn a working install. On a runtime
+switch, re-run cell~2 only.
+(ii)~Section~5c must be skipped on a Colab cloud backend: a cloud VM
+cannot route to a private machine, and \code{db\_manager} will silently
+fall back to FAISS while still logging \code{Vector DB ready}. That green
+message is not evidence of anything.
+\end{notebox}
+
+%=============================================================================
+\section{Datasets}
+\label{sec:data}
+%=============================================================================
+
+Seven public corpora are used. Table~\ref{tab:datasets} gives the summary;
+the subsections record provenance, split protocol and the integrity
+issues that were found and fixed.
+
+\begin{table}[!ht]
+\centering
+\caption{Datasets used by the genuine training pipeline}
+\label{tab:datasets}
+\small
+\begin{tabular}{@{}p{2.7cm}p{3.4cm}p{2.9cm}p{2.0cm}p{3.0cm}@{}}
+\toprule
+\textbf{Module} & \textbf{Dataset} & \textbf{Size used} &
+\textbf{Classes} & \textbf{Split protocol}\\
+\midrule
+Flagship ECG & PTB-XL 500\,Hz (PhysioNet) & 3\,000 records sampled
+(2\,389/296/315) & 5 superclasses & Official folds 1--8/9/10,
+patient-independent\\
+\addlinespace
+ECG arrhythmia & MIT-BIH AAMI beats (Kaggle CSV) & 2\,999 train /
+21\,892 test & 5 (N,S,V,F,Q) & Official train/test CSV split\\
+\addlinespace
+CardioFusion & MIT-BIH, ECG-signal path only & 2\,549 train /
+21\,892 test & 5 & Train/val carve-out; test scored once\\
+\addlinespace
+Ventricular & MIT-BIH VFDB (PhysioNet) & 22 recordings,
+5\,s windows & 2 binary + 4 rhythm & Whole recordings per split;
+$2\times5$-fold recording-level CV\\
+\addlinespace
+Heart sound & CirCor DigiScope (PhysioNet) & 942 subjects,
+2\,057/480/626 recordings & 3 murmur & Subject-level
+(patient-independent)\\
+\addlinespace
+Heart disease & UCI Cleveland, Kaggle mirror & 1\,025 rows
+$\rightarrow$ \textbf{302 unique} & 2 & $5\times3$ repeated stratified
+K-fold + 25\% hold-out\\
+\addlinespace
+Arthritis & NHANES MCQ (CDC/Kaggle) & 5\,756 records
+(3\,000 sampled) & 2 & $5\times3$ repeated stratified K-fold + 20\%
+hold-out\\
+\addlinespace
+Echo (LVEF) & EchoNet-Dynamic (Stanford AIMI) &
+\textcolor{dcwarn}{not obtained} & 3 EF categories &
+\textcolor{dcwarn}{n/a --- access required}\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{PTB-XL --- flagship 12-lead ECG}
+
+Clinical 12-lead ECGs at 500~Hz, 10~seconds per record
+($12\times5000$ samples). The loader targets the five diagnostic
+superclasses \{NORM, MI, STTC, CD, HYP\} and uses the official
+patient-independent folds, so no patient appears in more than one split.
+
+PTB-XL assigns \emph{multi-label} superclasses, so the published
+per-class record counts overlap rather than partition the corpus:
+NORM 9\,528, MI 5\,486, STTC 5\,250, CD 4\,907, HYP 2\,655 over 21\,837
+records from 18\,885 patients. These are reference frequencies stored in
+the loader as \code{PTBXL\_REFERENCE\_COUNTS}; the training run samples a
+subset (3\,000 records by default) and reports metrics on its own held-out
+fold.
+
+\emph{Integrity note.} Drive-cached copies of PTB-XL are sometimes missing
+waveform folders, and a missing record silently falls back to a
+\emph{synthetic} signal --- which would contaminate results with fabricated
+data. Cell~9 exists solely to prevent this: it force-downloads a complete
+copy to local Colab disk and repoints the loader. The acceptance check is
+that \code{records500/21000} contains approximately 838 \code{.hea} files;
+a count of~0 means the mirror itself is incomplete.
+
+\subsection{MIT-BIH Arrhythmia --- beat classification}
+
+Pre-segmented single-beat vectors of 187 samples, distributed as CSV, with
+the five AAMI classes N, S, V, F, Q. The official train/test CSV split is
+used; the test set of 21\,892 beats is many times larger than the 2\,999
+sampled training beats, which makes the reported accuracy pessimistic
+relative to a balanced protocol. The class distribution is strongly
+imbalanced toward N, so macro-$F_1$ and AUC are the honest headline
+figures and raw accuracy is not.
+
+\subsection{MIT-BIH VFDB --- ventricular arrhythmia}
+
+Twenty-two dual-channel recordings, 30 minutes each at 250~Hz, segmented
+into 5-second windows. Rhythms \{VT, VF, VFL, VFIB, ASYS, HGEA, VER\} are
+treated as \emph{dangerous}; the remainder (N, AFIB, NOISE, SBR, SVTA,
+NOD, B, PM) form the background class. Splits are by whole recording, so a
+recording never contributes windows to two splits.
+
+\emph{Integrity note.} Twenty-two recordings cannot support a point
+estimate from a single 15/3/4 split. The single split gave test
+$F_1$(dangerous)~0.5147 / AUC~0.8046 against validation 0.894 / 0.984 ---
+a gap over four test recordings. It was therefore replaced by
+$2\times5$-fold recording-level cross-validation (cell~37), and the
+cross-validated figures are the reportable ones.
+
+\subsection{CirCor DigiScope --- phonocardiogram murmur}
+
+Heart-sound recordings at 4\,000~Hz from multiple auscultation locations
+(AV, PV, TV, MV, Phc), labelled \{Absent, Present, Unknown\}. \emph{Unknown}
+is a genuine annotation meaning auscultation was inconclusive --- not a
+missing-data marker. The public training subset is 3\,163 recordings from
+942 subjects; the full release (5\,272 recordings, 1\,568 subjects) retains
+a hidden test set.
+
+\emph{Integrity notes, both fixed.} (i)~Subject identifiers were parsed
+with \code{rsplit("\_", 1)}, which splits repeat-recording names such as
+\code{50204\_MV\_1.wav} on the \emph{last} underscore, yielding patient id
+\code{50204\_MV} instead of \code{50204}. This created 20 phantom subjects
+(962 counted against 942 real), silently defaulted their murmur label to
+the \emph{Unknown class}, and --- most seriously --- allowed one patient to
+appear in both train and test. Corrected to \code{partition("\_")}.
+(ii)~A recording truncated by an interrupted download
+(\code{85286\_AV.wav}, 15\,974 of 161\,280 bytes) was repaired; the
+download command uses \code{wget -N -c} and never \code{-nc}, which skips
+any file that merely exists without checking completeness.
+
+\subsection{UCI Cleveland --- heart disease}
+
+The Kaggle mirror ships 1\,025 rows, but these are the 303-record Cleveland
+cohort expanded with duplicate rows. Identical rows on both sides of a
+random split inflate every metric, so training deduplicates to the
+\textbf{302 unique} records first.
+
+\emph{Integrity note.} This mirror's \code{target} column is inverted
+relative to the module's own documentation: measured on the file, the
+\code{target==0} group carries the diseased clinical profile. The
+prediction path detects the polarity from clinical priors rather than
+hardcoding a flip, so a corrected upstream file would be left alone.
+
+\subsection{NHANES --- arthritis risk}
+
+CDC National Health and Nutrition Examination Survey, Medical Conditions
+Questionnaire: 5\,756 records (2\,752 male, 3\,004 female, mean age
+49.1~years). The prediction target is \textbf{MCQ160A}, ``has a doctor ever
+told you that you have arthritis'' --- self-reported, doctor-diagnosed,
+predominantly osteoarthritis. It is \emph{not} serological rheumatoid
+arthritis, and results are not comparable with RA-cohort literature.
+
+\emph{Integrity note.} The arthritis-type field MCQ195 (RA/OA) is a
+skip-pattern question asked only of arthritis-positive respondents; it is
+excluded as a target-leakage source. Retaining it inflated AUC from an
+honest $\approx$0.79 to $\approx$0.99 --- the ablation study
+that revealed this is cell~35.
+
+\subsection{EchoNet-Dynamic --- not obtained}
+
+Apical 4-chamber echocardiogram videos with EF, ESV and EDV annotations.
+Access requires registration with Stanford AIMI and the dataset is
+\textbf{not present}; \code{genuine\_results.json} records an \code{error}
+entry for this module rather than a metric. The echo module therefore has
+\textbf{no trained weights}, and every figure that would describe echo
+performance is withheld throughout this report.
+
+%=============================================================================
+\section{Algorithms}
+\label{sec:algo}
+%=============================================================================
+
+All architectural values below are read from the implementation.
+
+\subsection{Flagship encoder --- \texorpdfstring{\code{ECGTransformerMoE}}{ECGTransformerMoE}}
+
+Defined in \code{core/pipeline.py}; trained by \code{core/train\_ptbxl.py}
+through the wrapper \code{ECGSuperclassNet}.
+
+\begin{enumerate}[leftmargin=1.5em,itemsep=1pt]
+  \item \textbf{Patch embedding}: \code{Conv1d(12, 256, kernel=50,
+        stride=50)} maps the $12\times5000$ input to 100 non-overlapping
+        patches of 256 dimensions --- one patch per 100~ms at 500~Hz.
+  \item A learnable \code{[CLS]} token is prepended, giving
+        $(B, 101, 256)$, and learnable positional embeddings are added.
+  \item \textbf{6 Transformer blocks}, each with 8-head self-attention and
+        a \textbf{mixture-of-experts feed-forward} layer: 4 experts,
+        top-2 routing, FFN dimension 1024, dropout 0.1.
+  \item The \code{[CLS}] output passes through LayerNorm and a
+        $256\rightarrow256$ projection to yield the ECG embedding.
+  \item A diagnostic head maps the embedding to the 5 PTB-XL superclasses.
+        The embedding is separately projected $256\rightarrow768$ to query
+        the vector store.
+\end{enumerate}
+
+Total parameters: 14\,453\,765. Optimiser Adam, learning rate
+$3\times10^{-4}$, batch size 32, 30 epochs, seed 42. A ResNet-34 1D
+encoder is available as the ablation baseline
+(\code{ablate\_ecg\_encoder}).
+
+\subsection{Beat classifier --- \texorpdfstring{\code{ECGArrhythmiaCNN}}{ECGArrhythmiaCNN}}
+
+Four 1D-convolution blocks with channel widths $(32, 64, 128, 256)$ and
+kernels $(7,5,3,3)$, each followed by batch normalisation, ReLU and
+pooling; then a fully connected head $256\rightarrow128\rightarrow64
+\rightarrow5$. The input tensor is single-channel,
+$(N, 1, 187)$. Class imbalance is handled with a weighted
+cross-entropy loss.
+
+\subsection{Ventricular detector --- \texorpdfstring{\code{VentricularArrhythmiaDetector}}{VentricularArrhythmiaDetector}}
+
+A dual-channel 1D-CNN (\code{in\_channels=2}) over 5-second windows, with
+\emph{two heads}: a binary dangerous-vs-background head and a 4-class
+rhythm-family head \{Normal, VT, VF/VFL, Other\_Dangerous\}. 313\,958
+parameters. The class carries an explicit \code{is\_trained} flag, set
+true only when genuine weights are loaded, so that a random-weight
+detector cannot surface a live alert.
+
+Cross-validation (\code{core/cv\_vfdb.py}) folds \emph{whole recordings},
+stratified by dangerous-window fraction; validation recordings are drawn
+from the training pool only, and each test fold is scored exactly once
+after early stopping. Single-class test folds report AUC as NaN and are
+counted rather than silently averaged; a single-class \emph{training} fold
+raises.
+
+\subsection{Murmur classifier --- \texorpdfstring{\code{HeartSoundClassifier}}{HeartSoundClassifier}}
+
+Audio at 4\,000~Hz is cut into 5-second segments and converted to log-Mel
+spectrograms with 64 Mel bands and hop length 128, padded or cropped to a
+fixed width of 160 frames for batching. A 2D-CNN with three convolution
+blocks $(16, 32, 64)$ and adaptive average pooling feeds a 3-class softmax
+head. 44\,707 parameters --- by far the smallest network in the system.
+
+\subsection{Tabular BERT + Mixture-of-Experts}
+
+Two instances of the same design, with \emph{different} hyperparameters:
+
+\begin{table}[!ht]
+\centering
+\caption{TabularBERT-MoE instances as implemented}
+\label{tab:bertmoe}
+\small
+\begin{tabular}{@{}p{4.2cm}p{2.2cm}p{2.0cm}p{2.0cm}p{2.2cm}@{}}
+\toprule
+\textbf{Instance} & \textbf{$d_{\text{model}}$} & \textbf{Heads} &
+\textbf{Layers} & \textbf{Experts}\\
+\midrule
+Arthritis (\code{TabularBERTMoE}) & 64 & 4 & 3 & 6\\
+Heart disease (\code{HeartDiseaseBERTMoE}) & 64 & 4 & 2 & 4\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Each scalar feature value is projected to $d_{\text{model}}$ and summed
+with a learned feature-identity embedding, so the feature set is treated
+as a token sequence; a Transformer encoder then contextualises the tokens
+and a gated mixture-of-experts head produces the class logits.
+
+For arthritis the network is one input to a \textbf{stacking ensemble}:
+Gradient Boosting, Random Forest and Extra Trees form the base layer
+alongside the BERT-MoE, and a logistic-regression meta-learner is fitted
+on out-of-fold predictions. Minority-class balancing (SMOTE-style
+oversampling), imputation and scaling are all fitted \emph{inside} each
+training fold, never across the split.
+
+For heart disease, plain logistic-regression and gradient-boosting
+baselines are evaluated on \emph{identical folds}, so the added complexity
+of the deep model can be judged against them.
+
+\subsection{CardioFusion}
+
+A cross-modal Transformer with a multi-gate mixture-of-experts head over
+six tasks. Multi-task loss weights are \emph{learned} by homoscedastic
+uncertainty weighting (Kendall et al.), not hand-set. Because no public
+benchmark provides same-patient four-modality paired data, only the
+\textbf{ECG-signal path} is trained, on MIT-BIH beats resampled to a
+512-sample segment length. The remaining heads and the joint contrastive
+alignment are untrained --- visible in the learned task weights, where
+only the arrhythmia task has moved off its 0.5 initialisation
+(to 0.4196).
+
+\subsection{Retrieval subsystem}
+
+Retrieval is \emph{diagnosis-grounded}: the query is built from the
+predicted PTB-XL superclass, not from a raw embedding, and if the
+diagnostic head is absent the pipeline deliberately serves labelled
+placeholders rather than querying with something unfounded.
+
+Three rankers are evaluated over a 67-document clinical corpus with 38
+labelled queries: a lexical TF-IDF baseline, a semantic Sentence-BERT
+ranker (\code{all-mpnet-base-v2}, 768-dim), and a \textbf{hybrid
+reciprocal-rank-fusion} ranker combining the two. Metrics are
+Recall@$k$, Precision@$k$, MRR, nDCG@$k$ and Hit@$k$, reported overall and
+per superclass.
+
+%=============================================================================
+\section{Input, Process and Expected Output}
+\label{sec:io}
+%=============================================================================
+
+This section is the operational specification: for each module, what goes
+in, what the algorithm does, and what should come out --- both in
+\emph{form} (the shape and keys of the result) and in \emph{value} (the
+held-out figures actually observed).
+
+\begin{notebox}
+\textbf{How to read the ``expected value'' column.} These are the
+measurements stored in \code{data/genuine\_results.json} from the runs
+that produced the current weights. A re-run on the same seed and record
+count should land close to them; a substantially \emph{higher} figure is a
+reason to check for leakage, not a success.
+\end{notebox}
+
+\subsection{Module 1 --- Flagship ECG superclass encoder}
+
+\begin{table}[!ht]
+\centering
+\small
+\begin{tabular}{@{}p{2.4cm}p{12.4cm}@{}}
+\toprule
+\textbf{Entry point} & \code{train\_ptbxl(n\_records=3000, epochs=30)}
+--- notebook cell~17\\
+\midrule
+\textbf{Input} & PTB-XL WFDB records; tensor $(B, 12, 5000)$ --- 12 leads,
+10~s at 500~Hz. Labels: 5 diagnostic superclasses. Patient-independent
+official folds 1--8 (train), 9 (val), 10 (test).\\
+\addlinespace
+\textbf{Process} & Patch embedding (100 patches of 50 samples)
+$\rightarrow$ \code{[CLS]} + positional embeddings $\rightarrow$ 6
+Transformer blocks with 4-expert top-2 MoE FFN $\rightarrow$ LayerNorm
+$\rightarrow$ 256-dim embedding $\rightarrow$ diagnostic head. Adam,
+lr~$3\times10^{-4}$, batch~32, 30 epochs; model selection on validation
+macro-$F_1$; test scored once.\\
+\addlinespace
+\textbf{Output artefacts} & \code{data/ecg\_ptbxl\_encoder.pt} ($\approx$55~MB,
+loaded by \code{core/pipeline.py}), \code{data/ecg\_ptbxl\_metrics.json}\\
+\addlinespace
+\textbf{Expected values} &
+accuracy \textbf{0.5778} $\cdot$ macro-$F_1$ \textbf{0.4866} $\cdot$
+macro-AUC (OvR) \textbf{0.8007} $\cdot$ Brier 0.5966 $\cdot$ ECE 0.117.
+Per-class AUC: NORM 0.8832, MI 0.7817, STTC 0.8380, CD 0.7432, HYP 0.7572.
+Best validation macro-$F_1$ 0.5418. 14.45M parameters, 209.4~s on CUDA.\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Module 2 --- MIT-BIH beat arrhythmia classifier}
+
+\begin{table}[!ht]
+\centering
+\small
+\begin{tabular}{@{}p{2.4cm}p{12.4cm}@{}}
+\toprule
+\textbf{Entry point} & \code{train\_ecg\_arrhythmia(n\_records=3000,
+epochs=25)} --- notebook cell~19\\
+\midrule
+\textbf{Input} & MIT-BIH beat CSV; tensor $(N, 1, 187)$. Labels: 5 AAMI
+classes (N, S, V, F, Q). Official train/test split.\\
+\addlinespace
+\textbf{Process} & Four 1D-conv blocks $(32,64,128,256)$ with batch norm
+and pooling $\rightarrow$ FC $256\rightarrow128\rightarrow64\rightarrow5$.
+Class-weighted cross-entropy for the heavy N-class imbalance.\\
+\addlinespace
+\textbf{Output artefacts} & \code{data/ecg\_arrhythmia\_cnn\_model.pt},
+\code{data/ecg\_arrhythmia\_scaler.pkl}\\
+\addlinespace
+\textbf{Expected values} & accuracy 0.6065 $\cdot$ macro-$F_1$ 0.5086
+$\cdot$ \textbf{macro-AUC (OvR) 0.9283}, on 21\,892 held-out beats.
+Quote AUC and macro-$F_1$; accuracy is depressed by the 2\,999/21\,892
+train-to-test ratio.\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Module 3 --- Ventricular arrhythmia detector (VFDB)}
+
+\begin{table}[!ht]
+\centering
+\small
+\begin{tabular}{@{}p{2.4cm}p{12.4cm}@{}}
+\toprule
+\textbf{Entry point} & \code{train\_vfdb(epochs=30)} --- cell~24;
+\code{cross\_validate\_vfdb(n\_folds=5, n\_repeats=2, epochs=30)} ---
+cell~37\\
+\midrule
+\textbf{Input} & 22 VFDB recordings, dual-channel, 250~Hz, cut into
+5-second windows $(B, 2, 1250)$. Labels: binary dangerous-vs-background
+plus 4-class rhythm family.\\
+\addlinespace
+\textbf{Process} & 1D-CNN encoder with two heads. Folds are whole
+recordings stratified by dangerous-window fraction; validation drawn from
+the training pool; each test fold scored once after early stopping on
+validation $F_1$(dangerous). Training raises if any split is
+single-class.\\
+\addlinespace
+\textbf{Output artefacts} & \code{data/vfdb\_detector.pt},
+\code{data/vfdb\_metrics.json}, \code{data/vfdb\_cv\_metrics.json}\\
+\addlinespace
+\textbf{Expected values} &
+\textbf{Cross-validated (reportable):} AUC \textbf{0.9187}
+[0.8466, 0.9907] $\cdot$ $F_1$(dangerous) 0.7184 [0.6217, 0.8151] $\cdot$
+accuracy 0.8672 [0.8127, 0.9216] $\cdot$ rhythm macro-$F_1$ 0.4512
+[0.3831, 0.5193], over 10 fits, 176.8~s, 0 single-class test folds.
+Observed fold range AUC [0.6414, 0.9833].
+\textbf{Single split (provenance only):} AUC 0.8046, $F_1$(dang.) 0.5147.\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{notebox}
+\textbf{Interval caveat, to be quoted with the number.} The 95\% figure is
+a $t$-interval over fold scores. Folds share training recordings, so the
+scores are not independent and the interval is \emph{optimistic}: it
+describes spread across folds, not a confidence interval over patients.
+The superseded single split scored 0.8046, which lies \emph{below} the
+interval low of 0.8466 --- direct evidence that the interval is too
+narrow. The rhythm head (0.4512) must not be quoted as a strength; the
+binary head is the safety-relevant output.
+\end{notebox}
+
+\subsection{Module 4 --- Heart sound murmur (CirCor)}
+
+\begin{table}[!ht]
+\centering
+\small
+\begin{tabular}{@{}p{2.4cm}p{12.4cm}@{}}
+\toprule
+\textbf{Entry point} & \code{train\_circor(n\_max=3000, epochs=25)} ---
+notebook cell~25\\
+\midrule
+\textbf{Input} & CirCor \code{.wav} at 4\,000~Hz $\rightarrow$ 5-second
+segments $\rightarrow$ log-Mel spectrogram $(B, 1, 64, 160)$. Labels:
+\{Absent, Present, Unknown\}. Subject-level split,
+2\,057/480/626 recordings over 942 subjects.\\
+\addlinespace
+\textbf{Process} & 2D-CNN $(16,32,64)$ with batch norm and adaptive
+average pooling $\rightarrow$ 3-class softmax. Early stopping on
+validation macro-$F_1$; test scored once.\\
+\addlinespace
+\textbf{Output artefacts} & \code{data/heart\_sound\_classifier.pt},
+\code{data/circor\_metrics.json}\\
+\addlinespace
+\textbf{Expected values} & accuracy 0.7604 $\cdot$ macro-$F_1$ 0.5347
+$\cdot$ \textbf{Present-vs-Absent AUC 0.7611} $\cdot$ per-class $F_1$:
+Absent 0.8616, Present 0.4776, Unknown 0.2651. 44\,707 parameters,
+1\,249.3~s.\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent
+\textbf{Acceptance checks for a re-run} (all three passed on the current
+weights): the loader must report \textbf{942 subjects}, not 962 --- 962
+means a stale loader is cached and the kernel needs restarting; \emph{no}
+recordings skipped for a missing metadata row; and Present-vs-Absent AUC
+\emph{below} 0.7981, because 0.7981 is the leakage-contaminated figure and
+leakage inflates. Validation macro-$F_1$ is unstable across epochs, so
+quote the AUC as the headline and do not present macro-$F_1$ as precise.
+
+\subsection{Module 5 --- Heart disease risk (UCI Cleveland)}
+
+\begin{table}[!ht]
+\centering
+\small
+\begin{tabular}{@{}p{2.4cm}p{12.4cm}@{}}
+\toprule
+\textbf{Entry point} & \code{train\_heartdisease(n\_repeats=5, n\_splits=3,
+epochs=80)} --- notebook cell~26\\
+\midrule
+\textbf{Input} & \code{data/heart.csv} deduplicated 1\,025
+$\rightarrow$ 302 unique rows; 13 clinical features expanded to 21 after
+encoding. Binary target.\\
+\addlinespace
+\textbf{Process} & $5\times3$ repeated stratified K-fold with KNN
+imputation and scaling fitted inside each fold. TabularBERT-MoE
+(2 layers, 4 experts) trained per fold, plus logistic-regression and
+gradient-boosting baselines on identical folds. 25\% hold-out evaluated
+once.\\
+\addlinespace
+\textbf{Output artefacts} & \code{data/heart\_disease\_bert\_moe\_model.pt},
+\newline\code{data/heart\_disease\_bert\_moe\_scaler.pkl},
+\newline\code{data/heart\_disease\_metrics.json}\\
+\addlinespace
+\textbf{Expected values} &
+BERT-MoE: accuracy 0.7967 [0.7797, 0.8136], AUC 0.8718 [0.8594, 0.8841],
+$F_1$ 0.7939, Brier 0.1749.
+\textbf{Logistic baseline: AUC 0.8921 [0.8861, 0.8980]} --- higher than the
+deep model. GBT: AUC 0.8833. Hold-out (25\%) BERT-MoE: accuracy 0.7763,
+AUC 0.8551.\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent
+The baseline comparison is the point of this module: on 302 unique records
+a plain logistic regression beats the TabularBERT-MoE on every metric
+including calibration. That result should be reported as it stands.
+
+\subsection{Module 6 --- Arthritis risk (NHANES)}
+
+\begin{table}[!ht]
+\centering
+\small
+\begin{tabular}{@{}p{2.4cm}p{12.4cm}@{}}
+\toprule
+\textbf{Entry point} & \code{train\_arthritis(n\_records=3000)} ---
+notebook cell~18\\
+\midrule
+\textbf{Input} & NHANES MCQ; 10 base predictors (Age, Gender\_M,
+PovertyRatio, EducationLevel, BMI, SystolicBP, DiastolicBP, HasGout,
+HasOsteoporosis, InflammationProxy) expanded to \textbf{17} with
+engineered terms (age\_risk, age\_squared, bmi\_squared, obesity\_flag,
+age\_gender, pulse\_pressure, map). Target MCQ160A.\\
+\addlinespace
+\textbf{Process} & $5\times3$ repeated stratified K-fold with imputation,
+scaling and SMOTE-style balancing fitted \emph{inside} folds. Base layer
+GBM + RF + ExtraTrees + TabularBERT-MoE (3 layers, 6 experts);
+logistic-regression meta-learner on out-of-fold predictions. 20\%
+stratified hold-out taken before balancing.\\
+\addlinespace
+\textbf{Output artefacts} & \code{data/arthritis\_bert\_moe\_model.pt},
+\code{data/arthritis\_bert\_moe\_scaler.pkl} (carries the
+\code{feature\_cols} list)\\
+\addlinespace
+\textbf{Expected values} &
+CV accuracy 0.7622 [0.7540, 0.7704] $\cdot$ \textbf{CV AUC 0.7925
+[0.7813, 0.8038]} $\cdot$ CV macro-$F_1$ 0.6844 $\cdot$ CV Brier 0.1624.
+Hold-out: accuracy 0.7700, AUC 0.8127, $F_1$ 0.7024. Top features:
+age\_risk 0.157, age\_squared 0.128, Age 0.115.\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent
+\textbf{Two caveats to carry with these numbers.} First, the three leading
+features are collinear encodings of age, together roughly 40\% of total
+importance --- this is substantially an age model. Second, the hold-out AUC
+(0.8127) lies \emph{outside} the cross-validated interval
+[0.7813, 0.8038]; the cross-validated figure is the headline. A run
+returning AUC near 0.99 indicates MCQ195 has re-entered the feature set.
+
+\subsection{Module 7 --- CardioFusion (ECG path)}
+
+\begin{table}[!ht]
+\centering
+\small
+\begin{tabular}{@{}p{2.4cm}p{12.4cm}@{}}
+\toprule
+\textbf{Entry point} & \code{train\_cardiofusion(n\_records=3000,
+epochs=20)} --- notebook cell~21\\
+\midrule
+\textbf{Input} & MIT-BIH beats reshaped to 512-sample ECG segments;
+2\,549 train / 21\,892 test. Only the ECG-signal modality is populated.\\
+\addlinespace
+\textbf{Process} & Cross-modal Transformer with multi-gate MoE head over
+six tasks; loss weights learned by homoscedastic uncertainty weighting.
+Model selection on a validation split carved from train; class-weighted
+arrhythmia loss; test scored once.\\
+\addlinespace
+\textbf{Output artefacts} & \code{data/cardiofusion\_weights.pt},
+\code{data/cardiofusion\_metrics.json}\\
+\addlinespace
+\textbf{Expected values} & accuracy 0.8944 $\cdot$ macro-$F_1$ 0.5401
+$\cdot$ AUC 0.8384. Learned task weights: arrhythmia \textbf{0.4196}, all
+five other tasks still at their 0.5 initialisation.\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent
+Those five unchanged weights are the diagnostic fact: the corresponding
+heads never received gradient. Only the arrhythmia output of this module
+is a trained result; the EF, murmur, ventricular-alert and rhythm heads
+must not be surfaced, and no composite score aggregating them is
+meaningful. The run is also unstable across epochs, so a single run is not
+a defensible point estimate.
+
+\subsection{Module 8 --- LVEF estimation (blocked)}
+
+\begin{table}[!ht]
+\centering
+\small
+\begin{tabular}{@{}p{2.4cm}p{12.4cm}@{}}
+\toprule
+\textbf{Entry point} & \code{train\_echonet(n\_train=3000, n\_eval=1000,
+epochs=25)} --- notebook cell~23\\
+\midrule
+\textbf{Input} & EchoNet-Dynamic A4C videos, 32 frames at
+$112\times112$ grayscale. \textcolor{dcwarn}{Dataset not present.}\\
+\addlinespace
+\textbf{Process} & 3D-CNN video encoder (\code{EchoNetModel},
+384-dim embedding) $\rightarrow$ EF regression head, with predictions
+clamped to $[0,100]\%$, plus a 3-way EF category head
+(HFrEF $<40$, HFmrEF 40--50, Normal $\geq50$).\\
+\addlinespace
+\textbf{Expected output} & \textcolor{dcwarn}{\textbf{None.}} The module
+records an \code{error} entry in \code{genuine\_results.json} and produces
+no weights. Consequently the serving layer returns
+\code{ef\_predicted: null} with \code{model\_trained: false} rather than a
+number.\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Retrieval evaluation}
+
+\begin{table}[!ht]
+\centering
+\small
+\begin{tabular}{@{}p{2.4cm}p{12.4cm}@{}}
+\toprule
+\textbf{Entry point} & \code{run\_rag\_evaluation(include\_semantic=True)}
+--- notebook cell~33\\
+\midrule
+\textbf{Input} & 67-document clinical guideline corpus; 38 labelled
+queries with per-superclass relevance annotations.\\
+\addlinespace
+\textbf{Process} & Three rankers scored on identical queries: lexical
+TF-IDF, semantic Sentence-BERT (\code{all-mpnet-base-v2}), and hybrid
+reciprocal rank fusion. Metrics Recall@$k$, Precision@$k$, MRR, nDCG@$k$,
+Hit@$k$, reported overall and per superclass.\\
+\addlinespace
+\textbf{Expected values} & Recall@5: \textbf{hybrid RRF 0.939} versus
+lexical TF-IDF 0.899. Retrieval runs top-$k$ with $k=5$ against a 67-document
+corpus at 768 dimensions under $L_2$.\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent
+Because the corpus is small and hand-seeded, these figures verify that the
+retrieval \emph{mechanism} works; they are not evidence of retrieval
+quality at realistic corpus scale.
+
+\subsection{Grounding check (local runtime)}
+
+Cell~31 is the acceptance test for the whole chain. It reloads
+\code{core/pipeline.py}, calls \code{get\_model()} and asserts three
+things: the encoder reports \code{encoder\_is\_trained}, the PTB-XL
+diagnostic head is loaded, and the retrieval source is a member of
+\code{GROUNDED\_RETRIEVAL\_SOURCES} (\code{hybrid-rrf} or
+\code{milvus-sbert}, \emph{not} \code{demo-fallback}). Membership is
+tested rather than equality against a literal, so that a change of
+retrieval strategy does not silently report correctly-retrieved documents
+as ungrounded.
+
+%=============================================================================
+\section{Consolidated Results}
+%=============================================================================
+
+\begin{table}[!ht]
+\centering
+\caption{Held-out results, all modules (source: \code{data/genuine\_results.json})}
+\label{tab:summary}
+\small
+\begin{tabular}{@{}p{2.9cm}p{2.7cm}p{2.0cm}p{2.0cm}p{2.0cm}p{1.9cm}@{}}
+\toprule
+\textbf{Module} & \textbf{Dataset} & \textbf{Accuracy} &
+\textbf{Macro-$F_1$} & \textbf{AUC} & \textbf{Trained}\\
+\midrule
+Flagship ECG & PTB-XL & 0.5778 & 0.4866 & 0.8007 & \yes\\
+Beat arrhythmia & MIT-BIH & 0.6065 & 0.5086 & 0.9283 & \yes\\
+Ventricular (CV) & VFDB & 0.8672 & 0.7184$^{\dagger}$ & \textbf{0.9187} & \yes\\
+Heart sound & CirCor & 0.7604 & 0.5347 & 0.7611$^{\ddagger}$ & \yes\\
+Heart disease & UCI Cleveland & 0.7967 & 0.7939 & 0.8718 & \yes\\
+Arthritis & NHANES & 0.7622 & 0.6844 & 0.7925 & \yes\\
+CardioFusion & MIT-BIH (ECG) & 0.8944 & 0.5401 & 0.8384 & partial\\
+LVEF & EchoNet & --- & --- & --- & \no\\
+\midrule
+RAG retrieval & 67 docs / 38 queries &
+\multicolumn{3}{l}{Recall@5 0.939 (hybrid RRF) vs 0.899 (lexical)} & \yes\\
+\bottomrule
+\multicolumn{6}{@{}l}{\footnotesize $\dagger$ $F_1$(dangerous), the
+safety-relevant binary head. $\ddagger$ Present-vs-Absent AUC.}\\
+\multicolumn{6}{@{}l}{\footnotesize CardioFusion: only the arrhythmia head
+is trained; five task heads remain at initialisation.}
+\end{tabular}
+\end{table}
+
+\noindent
+\textbf{What this table does not say.} No module here exceeds its published
+benchmark. The flagship encoder at AUC 0.8007 sits below the
+$\approx$0.92 reported for PTB-XL in the literature; the murmur classifier
+at macro-$F_1$ 0.5347 is below the CirCor challenge figures; the heart
+disease deep model is beaten by logistic regression on its own folds.
+Report-generation quality (BLEU, factuality) has never been measured and
+no figure for it should be quoted.
+
+%=============================================================================
+\section{Reproduction Procedure}
+%=============================================================================
+
+\begin{enumerate}[leftmargin=1.5em,itemsep=2pt]
+  \item \textbf{Colab, T4 GPU.} Run cell~2 (mounts Drive, detects runtime),
+        then cell~4 (dependencies), then cell~5 and confirm in-kernel
+        \code{pandas 2.2.3 | wfdb 4.3.1 | numpy 2.0.2}. Pip's own output is
+        not sufficient evidence --- a pip upgrade lands underneath a kernel
+        that has already imported the old version.
+  \item Cell~7 (Kaggle credentials), cell~9 (PTB-XL completeness), cell~11
+        (VFDB + CirCor). Datasets already on Drive are not re-downloaded;
+        \code{wget -N -c} skips what is current.
+  \item Either cell~15 (\code{run\_all}) or the individual module cells
+        17--19, 21, 23--26. Every step is guarded: a missing dataset
+        records an \code{error} entry and the remaining modules continue.
+  \item Cell~37 for VFDB cross-validation (10 fits, $\approx$177~s).
+  \item Cell~35 for the ablation studies.
+  \item Wait for Drive to finish syncing \code{data/} back down.
+  \item \textbf{Switch to the local runtime}, re-run cell~2 \emph{only},
+        then cell~20 (pinned client), cells~28--29 (Milvus checks),
+        cell~31 (grounding check), cell~33 (RAG evaluation).
+\end{enumerate}
+
+\noindent
+Prerequisites on the local host: Docker Desktop running with the
+\code{milvus-standalone} container started (it does not auto-start after a
+reboot), and the Jupyter bridge installed
+(\code{jupyter\_http\_over\_ws} plus \code{notebook}).
+
+%=============================================================================
+\appendix
+\section{Paper-versus-Code Specification Deltas}
+\label{app:delta}
+%=============================================================================
+
+While assembling this document from source, the following architectural
+values in \code{DeepCardio\_CompIntel\_Submit.tex} were found to differ
+from the implementation. They are recorded here rather than silently
+reconciled; the \emph{code} column is what actually ran to produce the
+results in Table~\ref{tab:summary}.
+
+\begin{table}[!ht]
+\centering
+\footnotesize
+\begin{tabular}{@{}p{2.8cm}p{3.7cm}p{3.3cm}p{4.8cm}@{}}
+\toprule
+\textbf{Item} & \textbf{Paper states} & \textbf{Code implements} &
+\textbf{Source}\\
+\midrule
+Heart-disease BERT-MoE & 4-layer BERT, 6-expert MoE &
+\textbf{2 layers, 4 experts} &
+\code{heart\_disease\_}\newline\code{pipeline.py:289}\\
+\addlinespace
+Arthritis BERT-MoE & 4-layer BERT, 6 experts &
+\textbf{3 layers}, 6 experts &
+\code{arthritis\_pipeline.py:704}\\
+\addlinespace
+PCG Mel bands & 128 Mel bins & \textbf{64} &
+\code{heart\_sound\_loader.py:47}\\
+\addlinespace
+PCG hop length & hop 256 & \textbf{128} &
+\code{heart\_sound\_loader.py:48}\\
+\addlinespace
+PCG window & 3-second, 50\% overlap &
+\textbf{5-second} segments &
+\code{heart\_sound\_loader.py:46}\\
+\addlinespace
+Echo video depth & $64\times112\times112$ &
+\textbf{32}$\times112\times112$ &
+\code{echonet\_loader.py:27}\\
+\addlinespace
+Beat-classifier input & ``two leads: Lead~II + modified~V1'' &
+single-channel tensor $(N,1,187)$ &
+\code{ecg\_arrhythmia\_}\newline\code{pipeline.py:185}\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent
+A separate stale descriptor exists in the code itself:
+\code{arthritis\_pipeline.py:1127} still builds the string
+\code{"Hybrid Stack: BERT-MoE + GBM + RF + ExtraTrees + SVC $\rightarrow$
+LogReg Meta-Learner"}, although the fitted base learners are only
+\{\code{gbm}, \code{rf}, \code{et}\}. The same phantom SVC was removed from
+the paper and from the dashboard; this occurrence was not part of either
+fix.
+
+%=============================================================================
+\section{Artefacts Written to \texorpdfstring{\code{data/}}{data/}}
+%=============================================================================
+
+% Deliberately NOT a float: as a float it was deferred and dumped at the top
+% of the page, i.e. above its own section heading.
+\begin{center}
+\footnotesize
+\begin{tabular}{@{}p{6.6cm}p{8.0cm}@{}}
+\toprule
+\textbf{File} & \textbf{Written by / consumed by}\\
+\midrule
+\code{ecg\_ptbxl\_encoder.pt} & \code{train\_ptbxl} $\rightarrow$
+\code{core/pipeline.py} (flagship inference)\\
+\code{ecg\_ptbxl\_metrics.json} & \code{train\_ptbxl}\\
+\code{ecg\_arrhythmia\_cnn\_model.pt},\newline\code{ecg\_arrhythmia\_scaler.pkl} &
+\code{train\_ecg\_arrhythmia}\\
+\code{vfdb\_detector.pt}, \code{vfdb\_metrics.json} & \code{train\_vfdb}\\
+\code{vfdb\_cv\_metrics.json} & \code{cross\_validate\_vfdb}\\
+\code{heart\_sound\_classifier.pt},\newline\code{circor\_metrics.json} &
+\code{train\_circor}\\
+\code{heart\_disease\_bert\_moe\_model.pt},\newline\code{heart\_disease\_bert\_moe\_scaler.pkl},
+\newline\code{heart\_disease\_metrics.json} & \code{train\_heartdisease}\\
+\code{arthritis\_bert\_moe\_model.pt},\newline\code{arthritis\_bert\_moe\_scaler.pkl} &
+\code{train\_arthritis}; the scaler carries \code{feature\_cols}\\
+\code{cardiofusion\_weights.pt},\newline\code{cardiofusion\_metrics.json} &
+\code{train\_cardiofusion}\\
+\code{genuine\_results.json} & \code{run\_all} --- the single source of
+truth for every reported metric\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\vspace{1em}
+\begin{notebox}
+\textbf{Standing rule.} \code{data/genuine\_results.json} is the only
+sanctioned source of performance figures for this system. A number that
+cannot be traced to it, or to the raw metrics files it summarises, should
+not appear in a paper, a dashboard tile, or a report.
+\end{notebox}
+
+\end{document}
